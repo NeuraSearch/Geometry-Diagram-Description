@@ -1,1 +1,1 @@
-# geometry_diagram_description
+# Geometry-Diagram-Description
