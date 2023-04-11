@@ -1,0 +1,3 @@
+train_args:
+  data_path: "data/PGDP5K/"
+  num_classes: [1, 2, 3]
