@@ -136,7 +136,8 @@ class SEGModule(nn.Module):
 
     def _forward_train(self,  binary_seg, embedding, targets):
 
-        binary_seg_loss, var_loss, dist_loss, reg_loss = self.loss_evaluator(
+        binary_seg_loss, var_loss, dist_loss, reg_loss, \
+            gt_point_mask_for_rel, gt_line_mask_for_rel, gt_circle_mask_for_rel = self.loss_evaluator(
             binary_seg, embedding, targets
         )
         losses = {
@@ -145,7 +146,7 @@ class SEGModule(nn.Module):
             "loss_dist": dist_loss * self.cfg.MODEL.SEG.LOSS_RATIO_DIST,
             "loss_mean_reg": reg_loss * self.cfg.MODEL.SEG.LOSS_RATIO_REG
         }
-        return None, losses
+        return None, losses, (gt_point_mask_for_rel, gt_line_mask_for_rel, gt_circle_mask_for_rel)
 
     def _forward_test(self, binary_seg, embedding, image_sizes, fpn_stride):
         
@@ -153,4 +154,4 @@ class SEGModule(nn.Module):
         ggeos = self.ggeo_selector(
             binary_seg, embedding, image_sizes, fpn_stride
         )
-        return ggeos, {}
+        return ggeos, {}, None

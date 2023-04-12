@@ -14,6 +14,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 import torchvision
+import numpy as np
 
 from .layers import IOULoss
 
@@ -559,8 +560,26 @@ class SegLossComputation(object):
                             reshape_size = reshape_size)
                         )     
         var_loss, dist_loss, reg_loss = self.discriminative_loss(embedding, seg_gt)
-            
-        return binary_seg_loss, var_loss, dist_loss, reg_loss
+        
+        ########################get GT seg mask################################
+        gt_point_mask_for_rel = []  # len(gt_point_mask_for_rel)==bsz
+        gt_line_mask_for_rel = []
+        gt_circle_mask_for_rel = []
+        for ggeo in targets:
+            gt_point_mask_for_rel.append(ggeo.get_inst_seg_for_rel(
+                                            class_index=1,
+                                            reshape_size=reshape_size)
+                                        )
+            gt_line_mask_for_rel.append(ggeo.get_inst_seg_for_rel(
+                                            class_index=2,
+                                            reshape_size=reshape_size)
+                                        )
+            gt_circle_mask_for_rel.append(ggeo.get_inst_seg_for_rel(
+                                            class_index=3,
+                                            reshape_size=reshape_size)
+                                        )
+              
+        return binary_seg_loss, var_loss, dist_loss, reg_loss, gt_point_mask_for_rel, gt_line_mask_for_rel, gt_circle_mask_for_rel
 
     def discriminative_loss(self, embedding, seg_gt):
         

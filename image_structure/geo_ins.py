@@ -128,6 +128,19 @@ class GeoList(object):
         target=np.pad(target, pad_width, 'constant', constant_values=(False,False)) 
 
         return target 
+
+    def get_inst_seg_for_rel(self, class_index, reshape_size):
+        target = []
+        pad_width = ((0,max(0, reshape_size[0]-self.masks.shape[0])), \
+                     (0,max(0, reshape_size[1]-self.masks.shape[1])))
+        
+        for i in range(len(self)):
+            if self.extra_fields["labels"][i] == class_index:
+                target_each = self.masks[:, :, i] > 0
+                target.append(
+                    np.pad(target_each, pad_width, 'constant', constant_values=(False,False)) 
+                )
+        return target
         
     def get_inst_seg_target(self, class_index_list, reshape_size):
         '''
