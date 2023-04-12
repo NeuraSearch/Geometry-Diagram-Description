@@ -52,7 +52,7 @@ class FCOSPostProcessor(nn.Module):
     def forward_for_single_feature_map(
             self, locations, box_cls,
             box_regression, centerness,
-            image_sizes):
+            image_sizes, layer_num):
         """
         Arguments:
             anchors: list[BoxList]
@@ -118,6 +118,8 @@ class FCOSPostProcessor(nn.Module):
             boxlist = BoxList(detections, (int(w), int(h)), mode="xyxy")
             boxlist.add_field("labels", per_class)
             boxlist.add_field("scores", torch.sqrt(per_box_cls))
+            boxlist.add_field("layers", [layer_num for _ in range(per_class.size(0))])
+
             boxlist = boxlist.clip_to_image(remove_empty=False)     # 根据image的大小要把过大的box crop
             boxlist = remove_small_boxes(boxlist, self.min_size)
             results.append(boxlist)
@@ -144,7 +146,7 @@ class FCOSPostProcessor(nn.Module):
         """
         
         sampled_boxes = []  # [ [BoxList, ...] x bsz, ... ] x 5
-        for _, (l, o, b, c) in enumerate(zip(locations, box_cls, box_regression, centerness)):
+        for layer_num, (l, o, b, c) in enumerate(zip(locations, box_cls, box_regression, centerness)):
             """
                 l: Tensor(h_n * w_n, 2)
                 o: Tensor(b, 16, h_n, w_n)
@@ -154,7 +156,7 @@ class FCOSPostProcessor(nn.Module):
             # sampled_boxes[-1]: [BoxList, ...] x bsz
             sampled_boxes.append(
                 self.forward_for_single_feature_map(
-                    l, o, b, c, image_sizes
+                    l, o, b, c, image_sizes, layer_num
                 )
             )
         

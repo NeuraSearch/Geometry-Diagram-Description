@@ -180,6 +180,7 @@ class FCOSModule(nn.Module):
         # loss_box_cls: [1]
         # loss_box_reg: [?]
         # loss_centerness: [?]
+        # all_labels_to_layer: [{"s1": P3, "s0": P5, ...}, ...] len==bsz
         losses = {
             "loss_cls": loss_box_cls,
             "loss_reg": loss_box_reg,
@@ -200,7 +201,7 @@ class FCOSModule(nn.Module):
             locations, box_cls, box_regression, 
             centerness, image_sizes
         )
-        return boxes, {}
+        return boxes, {}, None
 
     def compute_locations(self, features):
         locations = []
