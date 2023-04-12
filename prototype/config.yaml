@@ -1,3 +1,31 @@
 train_args:
   data_path: "data/PGDP5K/"
   num_classes: [1, 2, 3]
+image_input:
+  max_size_train: 1200
+backbone_args:
+  freeze_conv_body_at: 0
+  backbone_out_channels: 128
+  fpn_use_gn: False
+  fpn_use_relu: False
+  fpn_strides: [8, 16, 32, 64, 128]
+rpn_args:
+  rpn_num_classes: 17
+  rpn_norm_reg_targets: False
+  rpn_centerness_on_reg: False
+  rpn_use_dcn_in_tower: False
+  rpn_inference_th: 0.2
+  rpn_pre_nms_top_n: 1000
+  rpn_nms_th: 0.5
+  rpn_det_per_img: 100
+  rpn_bbox_aug_enabled: False
+  rpn_center_sampling_radius: 0.0
+  rpn_iou_loss_type: "iou"
+seg_args:
+  seg_num_classes: 4
+  seg_emb_dims: 8
+  seg_num_convs: 3
+  seg_fpn_strides: 4
+visemb_args:
+  vis_emb_dims: 64
+  vis_num_convs: 3
