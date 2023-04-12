@@ -8,7 +8,7 @@ import torch
 from distributed_utils import MetricLogger, SmoothedValue, is_main_process, warmup_lr_scheduler, reduce_dict
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
-                    print_freq=50, warmup=False, scaler=None):
+                    print_freq=50, warmup=False, scaler=None, run=None):
     model.train()
     metric_logger = MetricLogger(delimiter="  ")
     metric_logger.add_meter("lr", SmoothedValue(window_size=1, fmt="{value:.6f}"))
@@ -63,6 +63,12 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         metric_logger.update(loss=loss_reduced, **loss_dict_reduced)
         now_lr = optimizer.param_groups[0]["lr"]
         metric_logger.update(lr=now_lr)
+        
+        # wandb is not None only on rank0
+        if run != None:
+            run.log({"loss_reduced": loss_reduced})
+            run.log(loss_dict_reduced)
+            
     
     return mloss, now_lr
 

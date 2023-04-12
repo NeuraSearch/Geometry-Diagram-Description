@@ -7,21 +7,30 @@ MAIN_PATH = Path(__file__).absolute().parent.parent
 sys.path.insert(0, str(MAIN_PATH))
 
 import time
+import json
 import torch
+import wandb
 import datetime
 
 from train_args import add_train_args
 from train_utils import init_distributed_mode, create_aspect_ratio_groups, \
         GroupBatchSampler, \
             train_one_epoch, evaluate, \
-                save_on_master
+                save_on_master, set_environment, \
+                    is_main_process
 
 def main(args):
     # setup multiple GPUs training
     init_distributed_mode(args)
     
-    # TODO: 这里转换var(args), 存入wandb
+    # set random seed
+    set_environment(args.seed)
+    
+    # don't worry about the "print()", it has been force to work on the main rank
+    # by "setup_for_distributed()" after calling "init_distributed_mode()" above
     print(args)
+    with codecs.open(os.path.join(args.output_dir, "config.json"), "w", "utf-8") as file:
+        json.dump(vars(args), file, indent=2)
     
     # args.device: "cuda"
     # 在不同进程的时候, init_distributed_mode()通过`torch.cuda.set_device(args.gpu)`
@@ -32,6 +41,13 @@ def main(args):
     # results save path
     now = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
     results_file = f"results_{now}.txt"
+    
+    # wandb
+    if is_main_process() and args.wandb_key != None:
+        wandb.login(key=args.wandb_key)
+        run = wandb.init(project=f"{args.project_name}_{now}", config=args)
+    else:
+        run = None
 
     print("Loading data")
     data_transform = {"train": None, "test": None}
@@ -97,6 +113,10 @@ def main(args):
         # model_without_ddp = model.module
     
     # TODO: 去掉注释
+    # if is_main_process() and run != None:
+    #     run.watch(model)
+    
+    # TODO: 去掉注释
     # params = [p for p in models.parameters() if p.requires_grad]
     # optimizer = torch.optim.SGD(
     #     params, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
@@ -141,7 +161,7 @@ def main(args):
         # TODO: 去掉注释
         # mean_loss, lr = train_one_epoch(model, optimizer, data_loader_train,
         #                                 device, epoch, args.print_freq,
-        #                                 warmup=True, scaler=scaler)
+        #                                 warmup=True, scaler=scaler, run=run)
 
         # TODO: 去掉注释
         # lr_scheduler.step()
