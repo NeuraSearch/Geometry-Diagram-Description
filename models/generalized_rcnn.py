@@ -75,7 +75,7 @@ class GeneralizedRCNN(nn.Module):
             - loss_box_reg: [?]
             - loss_centerness: [?]
         """
-        proposals_det, proposal_det_losses = self.rpn(images, features[1:], targets_det)
+        proposals_det, proposal_det_losses, all_labels_to_layer = self.rpn(images, features[1:], targets_det)
 
         # self.location_map: [2, 350, 350] -(切割)> [2, H, W], H, W代表first FPN network的H,W
         # 因为输入图像是batch且padding过的, 因此features[0].shape大家都一样

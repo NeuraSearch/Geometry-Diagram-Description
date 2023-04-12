@@ -6,6 +6,9 @@ file
 """
 
 import os
+import bisect
+import operator
+import itertools
 
 import torch
 import torch.nn.functional as F
@@ -149,8 +152,14 @@ class FCOSLossComputation(object):
         #   这里每层的点都会分配一个label, 有些点直接就被分配了0(背景), 有些点分配的GT Box不一定是真的, 这里无所谓
         #   NOTE: 我想强调的是每个点都有一个lable, 从而labels.size(0) == reg_targets.size(0)
         # reg_targers: [#points_per_level, 4] x bsz, 对应的是feature map上每个点分配的GT Box
-        labels, reg_targets = self.compute_targets_for_locations(
+        labels, reg_targets, sym_ids = self.compute_targets_for_locations(
             points_all_level, targets, expanded_object_sizes_of_interest
+        )
+        
+        # we extract the layer from which the golden GT box is based on
+        # all_labels_to_layer: [{"s1": P3, "s0": P5, ...}, ...] len==bsz
+        all_labels_to_layer = self.extract_golden_label_layer_num(
+            labels, reg_targets, sym_ids
         )
 
         # 循环每个batch
@@ -195,8 +204,52 @@ class FCOSLossComputation(object):
             - labels_level_first: List[Tensor(bsz, #P_n)], len(labels_level_first)==5
             - reg_targets_level_first: List[Tensor(bsz, #P_n, 4)], len(reg_targets_level_first)==5
         """
-        return labels_level_first, reg_targets_level_first
+        return labels_level_first, reg_targets_level_first, all_labels_to_layer
 
+    def extract_golden_label_layer_num(self, labels, reg_targets, sym_ids):
+        """For train, this is used to find out the feature map on which the GT box is mapped on,
+            so that we could extract the feature vector for the GT box on the correct layer of feature map.
+        
+            Args:
+                labels: [#points_per_level] x bsz
+                reg_targets: [#points_per_level, 4] x bsz
+                sym_ids: [#points_per_level] x bsz, each item is str
+        """
+        # e.g., [#P3, #P4, #P5] -> [#P3, #P3+#P4, #P3+#P4+#P5]
+        layer_points_num_accu = itertools.accumulate(self.num_points_per_level, operator.add)
+        assert layer_points_num_accu[-1] == labels.size(0)
+        
+        # [{"s1": P3, "s0": P5, ...}, ...] len==bsz
+        all_labels_to_layer = []
+        for b_idx, label in enumerate(labels):
+            # select points positions assigned to non-background
+            selected_pos = torch.nonzero(labels > 0)    # [?]
+            
+            reg_selected = reg_targets[b_idx][selected_pos]     # [?, 4]
+            # a GT box might be assigned to multiple points, we select the one with highest centerness score
+            center_scores = self.compute_centerness_targets(reg_selected)   # [?]
+            
+            la_to_layer = {}
+            la_to_cs = {}
+            for i, pos in enumerate(selected_pos):
+                assert label[pos] != 0 and sym_ids[pos] != "sb"
+
+                sym_ids  = sym_ids[pos]
+                layer_num = bisect.bisect_right(layer_points_num_accu, pos)
+                if sym_ids not in la_to_layer:
+                    #  0  1  2  3  4
+                    # P3 P4 P5 P6 P7
+                    la_to_layer[sym_ids] = layer_num + 3
+                    la_to_cs[sym_ids] = center_scores[i]
+                else:
+                    if center_scores[i] > la_to_cs[sym_ids]:
+                        la_to_layer[sym_ids] = layer_num + 3
+                        la_to_cs[sym_ids] = center_scores[i]
+            
+            all_labels_to_layer.append(la_to_layer)
+        
+        return all_labels_to_layer
+        
     def compute_targets_for_locations(self, locations, targets, object_sizes_of_interest):
         """
             - locations: [#points_per_level, 2], 每个点都不一样
@@ -205,6 +258,7 @@ class FCOSLossComputation(object):
         """
         labels = []
         reg_targets = []
+        sym_ids = []    # NOTE: for recording "s0, s1, s2, ..."
         # locations里面的点是根据行数循环的, 固定列, 先循环行, 然后再改变列, 再循环行
         #   xs: 0 8 16 ... 624 632 0 8 16 ... 624 632 ...
         #   ys: 0 0 0  ... 0   0   8 8 8  ... 8   8   ...
@@ -302,10 +356,21 @@ class FCOSLossComputation(object):
 
             labels.append(labels_per_im)
             reg_targets.append(reg_targets_per_im)
-
+            
+            # NOTE: for each point, we record which sym_ids is allocated to it
+            # e.g., temp: [s1, s5, s2, ..., sb, s3], in #points_per_level length
+            ids_per_im = targets_per_im.get_field("ids")
+            temp = []
+            for sym_idx in locations_to_gt_inds:
+                if locations_to_min_area[sym_idx] == INF:
+                    temp.append("sb")
+                else:
+                    temp.append(ids_per_im[sym_idx])
+            sym_ids.append(temp)
+            
         # labels: [[#points_per_level], ...] x bsz, 对应的是feature map上每个点分配的label_idx
         # reg_targers: [[#points_per_level, 4], ...] x bsz, 对应的是feature map上每个点分配的GT Box
-        return labels, reg_targets
+        return labels, reg_targets, sym_ids
 
     def compute_centerness_targets(self, reg_targets):
         # reg_targets: [?, 4]
@@ -346,7 +411,8 @@ class FCOSLossComputation(object):
         # 2. 看GT box应该是哪个level的feature map
         # - labels: List[Tensor(bsz, #P_n)], len(labels)==5, 五层labels, 其中一个Tensor(bsz, #P_n)代表每一层所有batch的信息
         # - reg_targets: List[Tensor(bsz, #P_n, 4)], len(reg_targets)==5
-        labels, reg_targets = self.prepare_targets(locations, targets)
+        # - all_labels_to_layer: List[Dict{"s0": P5, "s2": P3, "s1": P6}, ...] len(all_labels_to_layer)==bsz
+        labels, reg_targets, all_labels_to_layer = self.prepare_targets(locations, targets)
 
         box_cls_flatten = []            # pred: List[Tensor(b * #P_n, 16), ...],  5个
         box_regression_flatten = []     # pred: List[Tensor(b * #P_n, 4), ...],   5个
@@ -433,7 +499,8 @@ class FCOSLossComputation(object):
         # cls_loss: [1]
         # reg_loss: [1]
         # centerness_loss: [1]
-        return cls_loss, reg_loss, centerness_loss
+        # all_labels_to_layer: List[Dict{"s0": P5, "s2": P3, "s1": P6}, ...] len(all_labels_to_layer)==bsz
+        return cls_loss, reg_loss, centerness_loss, all_labels_to_layer
 
 class SegLossComputation(object):
     """

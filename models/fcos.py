@@ -6,8 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .layers import Scale
-from .inference import make_fcos_postprocessor
 from .loss import make_fcos_loss_evaluator
+from .inference import make_fcos_postprocessor
 
 class FCOSHead(torch.nn.Module):
     def __init__(self, cfg, in_channels):
@@ -174,7 +174,7 @@ class FCOSModule(nn.Module):
             - centerness: List[Tensor(b, 1, h_n, w_n), ...], len(locations)==5
             - targets: 
         """
-        loss_box_cls, loss_box_reg, loss_centerness = self.loss_evaluator(
+        loss_box_cls, loss_box_reg, loss_centerness, all_labels_to_layer = self.loss_evaluator(
             locations, box_cls, box_regression, centerness, targets
         )
         # loss_box_cls: [1]
@@ -185,7 +185,7 @@ class FCOSModule(nn.Module):
             "loss_reg": loss_box_reg,
             "loss_centerness": loss_centerness
         }
-        return None, losses
+        return None, losses, all_labels_to_layer
 
     def _forward_test(self, locations, box_cls, box_regression, centerness, image_sizes):
         """
