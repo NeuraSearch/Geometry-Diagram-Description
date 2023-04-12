@@ -69,7 +69,6 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
             run.log({"loss_reduced": loss_reduced})
             run.log(loss_dict_reduced)
             
-    
     return mloss, now_lr
 
 @torch.no_grad()
