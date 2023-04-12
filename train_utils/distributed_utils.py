@@ -3,6 +3,8 @@
 import os
 import time
 import datetime
+import random
+import numpy as np
 import torch
 import torch.distributed as dist
 
@@ -283,3 +285,10 @@ def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):
         return warmup_factor * (1 - alpha) + alpha  # 1 / 1000.
     
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=f)
+
+def set_environment(seed=17, set_cuda=True):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available() and set_cuda:
+        torch.cuda.manual_seed_all(seed)
