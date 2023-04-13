@@ -108,7 +108,7 @@ class GeneralizedRCNN(nn.Module):
         # TODO: test 拿到box特征
         """
         循环proposals_det
-            循环每个boxlist
+            每个boxlist
                 拿到boxlist.bbox
                 拿到boxlist.labels
                 拿到boxlist.layers
