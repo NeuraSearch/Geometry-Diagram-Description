@@ -3,6 +3,8 @@ import torch
 from .bounding_box import BoxList
 import torchvision
 
+import itertools
+
 def boxlist_nms(boxlist, nms_thresh, max_proposals=-1, score_field="scores"):
     """
     Performs non-maximum suppression on a boxlist, with scores specified
@@ -179,6 +181,10 @@ def cat_boxlist(bboxes):
         content = [bbox.get_field(field) for bbox in bboxes]
         if isinstance(content[0], torch.Tensor):
             content_new = torch.cat(content, dim=0)
-        cat_boxes.add_field(field, content_new)
+            cat_boxes.add_field(field, content_new)
+        else:
+            # !!! to add non-tensor field, e.g., "layers"
+            content = list(itertools.chain(*content))
+            cat_boxes.add_field(field, content)
 
     return cat_boxes
