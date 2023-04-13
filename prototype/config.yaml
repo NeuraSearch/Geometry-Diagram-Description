@@ -29,3 +29,6 @@ seg_args:
 visemb_args:
   vis_emb_dims: 64
   vis_num_convs: 3
+sym_args:
+  sym_roi_output_size: 7
+  sym_embed_size: 64
