@@ -158,7 +158,7 @@ class FCOSLossComputation(object):
         )
         
         # we extract the layer from which the golden GT box is based on
-        # all_labels_to_layer: [{"s1": P3, "s0": P5, ...}, ...] len==bsz
+        # all_labels_to_layer: [{"s1": 3, "s0": 5, ...}, ...] len==bsz
         all_labels_to_layer = self.extract_golden_label_layer_num(
             labels, reg_targets, sym_ids
         )
