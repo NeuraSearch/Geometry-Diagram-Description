@@ -34,3 +34,7 @@ sym_args:
   sym_embed_size: 64
 geo_args:
   geo_embed_size: 64
+rel_args:
+  geo_rel_size: 64
+  sym_rel_size: 64
+  weak_mask: 0.2
