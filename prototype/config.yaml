@@ -32,3 +32,5 @@ visemb_args:
 sym_args:
   sym_roi_output_size: 7
   sym_embed_size: 64
+geo_args:
+  geo_embed_size: 64
