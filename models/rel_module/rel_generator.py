@@ -5,6 +5,7 @@ import torch.nn as nn
 
 from .geo_vector import GeoVectorBuild
 from .sym_vector import SymVectorBuild
+from .construct_rel import ConstructRel
 
 class RelGenerator(nn.Module):
     """This class is for relation construction of the sym, geo
@@ -21,13 +22,15 @@ class RelGenerator(nn.Module):
         self.build_geo = GeoVectorBuild(cfg)
         
         # build rel predict module
+        self.construc_rel = ConstructRel(cfg)
     
     def forward(self,
                 geo_feature_map, sym_feature_maps,
                 gt_point_mask=None, gt_line_mask=None, gt_circle_mask=None,
                 targets_det=None, all_labels_to_layer=None,
                 proposals_seg=None, proposals_det=None,
-                images_not_tensor=None):
+                images_not_tensor=None,
+                targets_geo=None, targets_sym=None):
         """
         Args:
             geo_feature_map (Tensor(B, c, h, w)): feature of features_share and visemb_features.
@@ -40,6 +43,14 @@ class RelGenerator(nn.Module):
             proposals_seg ([GeoList]): predicted GeoList.
             proposals_det (list[BoxList]): the predicted boxes from the RPN, one BoxList per image.
             images_not_tensor (list[(W, H), (W, H), ...]): len==bsz
+            targets_geo (List[Dict], optional): The golden relation between (points and lines), (points and circles),
+                The Dict keys must be: "pl_rels" (P, L), "pc_rels" (P, C)
+            targets_sym (List[Dict]): The golden relations between sym and geo, (#sym, #relevant_geo)
+                The Dict keys must be: "text_symbol_geo_rel", "head_symbol_geo_rel", 
+                    "[None|double_|triple_|quad_|penta_]angle_symbols_geo_rel",
+                    "[None|double_|triple_|quad_]bar_symbols_geo_rel",
+                    "[None|double_|parallel_]parallel_symbols_geo_rel",
+                    "perpendicular_symbols_geo_rel".
         """
         
         # # # # # # # # # Build Geo Feature # # # # # # # # #
@@ -67,4 +78,15 @@ class RelGenerator(nn.Module):
             all_labels_to_layer=all_labels_to_layer,
             proposals_det=proposals_det,
             images_not_tensor=images_not_tensor,
+        )
+        
+        # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        
+        # # # # # # # # # Construct Rel # # # # # # # # #
+        
+        geo_rels_predictions, sym_geo_rels_predictions, losses = self.construc_rel(
+            all_geo_info=all_geo_info,
+            all_sym_info=all_sym_info,
+            targets_geo=targets_geo,
+            targets_sym=targets_sym,
         )
