@@ -473,3 +473,15 @@ class ConstructRel(nn.Module):
             targets_sym=targets_sym)
     
         # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        
+    
+        if self.training:
+            losses = {}
+            losses.update(geo_rel_losses)
+            losses.update(sym_geo_rel_losses)
+            
+            return geo_rels_predictions, sym_geo_rels_predictions, losses
+
+        else:
+            
+            return geo_rels_predictions, sym_geo_rels_predictions, None
