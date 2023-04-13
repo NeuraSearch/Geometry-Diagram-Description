@@ -156,14 +156,14 @@ class FCOSPostProcessor(nn.Module):
             # sampled_boxes[-1]: [BoxList, ...] x bsz
             sampled_boxes.append(
                 self.forward_for_single_feature_map(
-                    l, o, b, c, image_sizes, layer_num
+                    l, o, b, c, image_sizes, layer_num+3
                 )
             )
         
         # [ (P3_B1, P3_B2, ... , P3_BN), (P4_B1, P4_B2, ... , P4_BN), (P7_B1, P7_B2, ... , P7_BN)]
         # [ (P3_B1, P4_B1, ... , P7_B1), (P3_B2, P4_B2, ... , P7_B2), ... ] 5层
         boxlists = list(zip(*sampled_boxes))
-        # [ BoxList(#box, 4), BoxList(#box, 4), ... ]
+        # [ BoxList(#box, 4), BoxList(#box, 4), ... ] len==bsz
         boxlists = [cat_boxlist(boxlist) for boxlist in boxlists]
         if not self.bbox_aug_enabled:
             # boxlists: List[ [BoxList, ...] ], len(boxlists) = bsz
