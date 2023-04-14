@@ -37,4 +37,4 @@ geo_args:
 rel_args:
   geo_rel_size: 64
   sym_rel_size: 64
-  weak_mask: 0.2
+  weak_mask: 0.5
