@@ -184,7 +184,8 @@ class SymtoGeo(nn.Module):
                 )
                 
                 for sym_geo_key, value in per_data_loss.items():
-                    losses[sym_geo_key] += value
+                    if value != None:
+                        losses[sym_geo_key] += value
 
             for sym_geo_key, value in losses.items():
                 losses[sym_geo_key] = value / len(geo_info)
@@ -202,7 +203,8 @@ class SymtoGeo(nn.Module):
                 
                 # apply sigmoid
                 for sym_geo_key, value in sym_to_geo_rel_dict.items():
-                    sym_to_geo_rel_dict[sym_geo_key] = self.sigmoid_ac(value)
+                    if value != None:
+                        sym_to_geo_rel_dict[sym_geo_key] = self.sigmoid_ac(value)
             
                 sym_geo_rels_predictions.append(sym_to_geo_rel_dict)
             
@@ -220,54 +222,60 @@ class SymtoGeo(nn.Module):
             sym_to_geo_rel_dict (Dict[]): contains the relation score ([0, 1]) between the 
                 different symbols and their possible geos.
         """
-                
-        # [P, sym_rel_size]
-        LPL_matrix, LPL_mask = self._combine_margin_middle_margin_matrix(
-            middle_geo=geo_info["points"],
-            margin_geo=geo_info["lines"],
-            geo_geo_rel=geo_rel["pl_rels"]),
         
-        # [L, sym_rel_size]
-        PLP_matrix, PLP_mask = self._combine_margin_middle_margin_matrix(
-            middle_geo=geo_info["lines"],
-            margin_geo=geo_info["points"],
-            geo_geo_rel=geo_rel["pl_rels"].T,
-        )
+        if geo_info["points"] != None and geo_info["lines"] != None:
+            # [P, sym_rel_size]
+            LPL_matrix, LPL_mask = self._combine_margin_middle_margin_matrix(
+                middle_geo=geo_info["points"],
+                margin_geo=geo_info["lines"],
+                geo_geo_rel=geo_rel["pl_rels"]),
         
-        # [C, sym_rel_size]
-        PCP_matrix, PCP_mask = self._combine_margin_middle_margin_matrix(
-            middle_geo=geo_info["circles"],
-            margin_geo=geo_info["points"],
-            geo_geo_rel=geo_rel["pc_rels"].T,
-        )
+            # [L, sym_rel_size]
+            PLP_matrix, PLP_mask = self._combine_margin_middle_margin_matrix(
+                middle_geo=geo_info["lines"],
+                margin_geo=geo_info["points"],
+                geo_geo_rel=geo_rel["pl_rels"].T,
+            )
+        else:
+            LPL_matrix = LPL_mask = None
         
-        sym_to_geo_rel_dict = {}
-        # # # construct rel between text_symbol and geo # # #
-        
-        # geo_matrix: [P+L+P+L+C, h]
-        geo_matrix = torch.cat((geo_info["points"], geo_info["lines"], LPL_matrix, PLP_matrix, PCP_matrix), dim=0)
-        
-        points_mask = LPL_mask.new([1]).repeat(geo_info["points"].size(0))
-        lines_mask = PLP_mask.new([1]).repeat(geo_info["lines"].size(0))
-        # [P+L+P+L+C]
-        mask = torch.cat((points_mask, lines_mask, LPL_mask, PLP_mask, PCP_mask))
+        if geo_info["circles"] != None and geo_info["points"] != None:
+            # [C, sym_rel_size]
+            PCP_matrix, PCP_mask = self._combine_margin_middle_margin_matrix(
+                middle_geo=geo_info["circles"],
+                margin_geo=geo_info["points"],
+                geo_geo_rel=geo_rel["pc_rels"].T,
+            )
+        else:
+            PCP_matrix = PCP_mask = None
         
         contain_head = len(sym_info["head_symbols"]) != 0
-        # text_symbol_geo_rel: [N, P+L+P+L+C, 1]
-        text_symbol_geo_rel = self._construct_rel_between_text_symbols_and_geo(
-            symbols=sym_info["text_symbols"],
-            geo_matrix=geo_matrix,
-            mask=mask,
-            head_symbol=sym_info["head_symbols"] if contain_head else None,
-        )
+        sym_to_geo_rel_dict = {}
         
-        sym_to_geo_rel_dict["text_symbol_geo_rel"] = text_symbol_geo_rel
+        """ construct rel between text_symbol and geo """
+        # geo_matrix: [P+L+P+L+C, h]
+        geo_matrix = self.concat_to_matrix(geo_info["points"], geo_info["lines"], LPL_matrix, PLP_matrix, PCP_matrix)
+        points_mask = LPL_mask.new([1]).repeat(geo_info["points"].size(0)) if geo_info["points"] != None else None
+        lines_mask = PLP_mask.new([1]).repeat(geo_info["lines"].size(0)) if geo_info["lines"] != None else None
+        # [P+L+P+L+C]
+        mask = self.concat_to_matrix(points_mask, lines_mask, LPL_mask, PLP_mask, PCP_mask)
         
-        # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        text_symbol_geo_rel = None
+        if sym_info["text_symbols"] != None and geo_matrix != None:
+            # text_symbol_geo_rel: [N, P+L+P+L+C, 1]
+            text_symbol_geo_rel = self._construct_rel_between_text_symbols_and_geo(
+                symbols=sym_info["text_symbols"],
+                geo_matrix=geo_matrix,
+                mask=mask,
+                head_symbol=sym_info["head_symbols"] if contain_head else None,
+            )
+            sym_to_geo_rel_dict["text_symbol_geo_rel"] = text_symbol_geo_rel
+            
+        """ *********************** End *********************** """
         
-        # # # construct rel between head_sym and LPL, PLP, PCP # # #
+        """ construct rel between head_sym and LPL, PLP, PCP """
         head_symbol_geo_rel = None
-        if contain_head:
+        if contain_head and geo_matrix != None:
             # geo_matrix: [P+L+C, h]
             geo_matrix = torch.cat((LPL_matrix, PLP_matrix, PCP_matrix), dim=0)
             # [P+L+C]
@@ -278,41 +286,53 @@ class SymtoGeo(nn.Module):
                 geo_matrix=geo_matrix,
                 mask=mask,
             )
-            
             sym_to_geo_rel_dict["head_symbol_geo_rel"] = head_symbol_geo_rel  
         
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        """ *********************** End *********************** """
         
-        # # # construct rel between other symbols with geo # # #
+        """ construct rel between other symbols with geo """
         
         for symbol_name, each_symbol_info in sym_info.items():
             
-            if "angle" in symbol_name:          
-                if each_symbol_info.size(0) > 1:     
+            if "angle" in symbol_name:
+                if each_symbol_info != None:
+                    if each_symbol_info.size(0) > 1 and LPL_matrix != None:     
+                        sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
+                            symbols=each_symbol_info,
+                            geo_matrix=LPL_matrix,
+                            mask=LPL_mask)
+                        continue
+                # too keep consistent with geo_info, syn_info, we still create key for None data
+                sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = None
+                    
+            elif "bar" in symbol_name:
+                if each_symbol_info != None:
+                    if each_symbol_info.size(0) > 1 and PLP_matrix != None:     
+                        sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
+                            symbols=each_symbol_info,
+                            geo_matrix=PLP_matrix,
+                            mask=PLP_mask)
+                        continue
+                sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = None
+                
+            elif "parallel" in symbol_name:
+                if each_symbol_info != None:
+                    if each_symbol_info.size(0) > 1 and geo_info["lines"] != None:     
+                        sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
+                            symbols=each_symbol_info,
+                            geo_matrix=geo_info["lines"],
+                            mask=lines_mask)
+                        continue
+                sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = None
+
+            elif "perpendicular" in symbol_name:
+                if each_symbol_info != None:
                     sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
                         symbols=each_symbol_info,
                         geo_matrix=LPL_matrix,
                         mask=LPL_mask)
-                    
-            elif "bar" in symbol_name:
-                if each_symbol_info.size(0) > 1:     
-                    sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
-                        symbols=each_symbol_info,
-                        geo_matrix=PLP_matrix,
-                        mask=PLP_mask)
-                
-            elif "parallel" in symbol_name:
-                if each_symbol_info.size(0) > 1:     
-                    sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
-                        symbols=each_symbol_info,
-                        geo_matrix=geo_info["lines"],
-                        mask=lines_mask)
-
-            elif "perpendicular" in symbol_name:
-                sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
-                    symbols=each_symbol_info,
-                    geo_matrix=LPL_matrix,
-                    mask=LPL_mask)
+                    continue
+                sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = None
         
         return sym_to_geo_rel_dict
         
@@ -364,9 +384,14 @@ class SymtoGeo(nn.Module):
         for sym_geo_key in per_data_sym_to_geo_rel_dict.keys():
             
             pred_logits = per_data_sym_to_geo_rel_dict[sym_geo_key]
-            target_ids = target[sym_geo_key]
             
-            per_data_loss[sym_geo_key] = self.bce_with_logits_loss(input=pred_logits, target=target_ids)
+            if pred_logits != None:
+                target_ids = target[sym_geo_key]
+                
+                per_data_loss[sym_geo_key] = self.bce_with_logits_loss(input=pred_logits, target=target_ids)
+            
+            else:
+                per_data_loss[sym_geo_key] = None
         
         return per_data_loss
     
@@ -404,6 +429,13 @@ class SymtoGeo(nn.Module):
         middle_qualified_mask = geo_geo_mask.sum(-1) > 1
         
         return geo_geo_matrix, middle_qualified_mask.float()
+
+    @staticmethod
+    def concat_to_matrix(*args):
+        to_concat_list = [vec for vec in args if vec != None]
+        if len(to_concat_list) == 0:    # no info available
+            return None
+        return torch.cat(to_concat_list, dim=0)
 
 class ConstructRel(nn.Module):
     """This module is for train or predict rel over geo and sym information."""

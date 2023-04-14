@@ -50,6 +50,12 @@ class SymVectorHead(nn.Module):
         
 class SymVectorBuild(nn.Module):
     
+    sym_lists = ["text_symbols", "text_symbols_str",
+                 "perpendicular_symbols", "head_symbols",
+                 "angle_symbols", "double_angle_symbols", "triple_angle_symbols", "quad_angle_symbols", "penta_angle_symbols",
+                 "bar_symbols", "double_bar_symbols", "triple_bar_symbols", "quad_bar_symbols",
+                 "parallel_symbols", "double_parallel_symbols", "triple_parallel_symbols"]
+    
     def __init__(self, cfg):
         super(SymVectorBuild, self).__init__()
         
@@ -225,11 +231,15 @@ class SymVectorBuild(nn.Module):
                     elif label == 13:
                         symbols_info["triple_parallel_symbols"].append(feature)
 
-            for key, value in symbols_info.items():
-                if key != "text_symbols_str" and len(value) != 0:
-                    # [[1, c, output_size, output_size], [1, c, output_size, output_size], ...] 
-                    # -> [N, c, output_size, output_size] -> [N, c_2]
-                    symbols_info[key] = self.sym_head(torch.cat(value, dim=0))
+            for key in self.sym_lists:
+                value = symbols_info[key]
+                if len(value) != 0:
+                    if key != "text_symbols_str":
+                        # [[1, c, output_size, output_size], [1, c, output_size, output_size], ...] 
+                        # -> [N, c, output_size, output_size] -> [N, c_2]
+                        symbols_info[key] = self.sym_head(torch.cat(value, dim=0))
+                else:
+                    symbols_info[key] = None
             
             all_symbols_info.append(symbols_info)
         

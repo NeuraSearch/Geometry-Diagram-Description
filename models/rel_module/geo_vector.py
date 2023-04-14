@@ -117,10 +117,13 @@ class GeoVectorBuild(nn.Module):
                     # [1, geo_embed_size]
                     geo_info["circle"].append(self.get_mask_map(feature_map[b_id], [mask]))
             
-            for key, val in geo_info.items():
+            for key in ["points", "line", "circle"]:
+                val = geo_info[key]
                 if len(val) != 0:
                     # [N, geo_embed_size]
                     geo_info[key] = torch.cat(val, dim=0)
+                else:
+                    geo_info[key] = None
             
             all_geo_info.append(geo_info)
         
@@ -144,5 +147,5 @@ class GeoVectorBuild(nn.Module):
             # [N, feat_channel, h, w] -> [N, geo_embed_size]
             geo_feature = self.geo_head(torch.stack(all_mask_map, dim=0))
             return geo_feature
-    
-        return None
+
+        raise ValueError("all_mask_map should contains something.")
