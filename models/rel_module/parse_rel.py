@@ -68,7 +68,7 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
                 elif "parallel" in sym:
                     other_symbols_geos_rel["parallel"].append(extract_congruent_geo(sym_rel, lines))
                 elif "perpendicular" in sym:
-                    other_symbols_geos_rel["perpendicular"].append(extract_congruent_geo(sym_rel, points))
+                    other_symbols_geos_rel["perpendicular"].append(extract_perperdicular_geo(sym_rel, points))
 
         per_results = {}
         per_results.update(text_symbols_geos_rel)
@@ -364,9 +364,28 @@ def extract_congruent_geo(symbol_geo_rel, geo):
     
     total_angles = symbol_geo_rel.size(0)
     
-    angles = []
+    results = []
     for i in range(total_angles):
-        select_p_idx = torch.argmax(symbol_geo_rel[i]).item()
-        angles.append(geo[select_p_idx])
+        _, select_p_idx = torch.topk(symbol_geo_rel[i], 2)
+        temp = []
+        for idx in select_p_idx.tolist():
+            temp.append(geo[idx])
+        results.append(temp)
     
-    return angles
+    return results
+
+def extract_perperdicular_geo(perpendicular_geo_rel, geo):
+    
+    total_sym = perpendicular_geo_rel.size(0)
+    
+    points = []
+    for i in range(total_sym):
+        select_point_idx = torch.argmax(perpendicular_geo_rel[i]).item()
+        
+        select_point = geo[select_point_idx]
+        
+        if select_point.can_perpendicular:
+            points.append(geo[select_point_idx])    
+    
+    return points
+    
