@@ -61,6 +61,10 @@ class GeoVectorBuild(nn.Module):
             gt_line_mask (List[Tensor(h, w)]): all lines mask result, in bool. bsz len
             gt_circle_mask (List[Tensor(h, w)]): all circles mask result, in bool. bsz len
             proposals_seg ([GeoList]): predicted GeoList.
+        
+        Returns:
+            all_geo_info: List[Dict]: Contain batch data geo information,
+                each dict contains geo information regarding to different classes, in Tensor([N, cfg.geo_embed_size])
         """
         
         if self.training:
