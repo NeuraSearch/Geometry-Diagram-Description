@@ -5,3 +5,5 @@ from .boxlist_ops import remove_small_boxes, cat_boxlist, choose_confident_boxes
 from .geo_ins import GeoList
 
 from .image_list import to_image_list
+
+from .primitives import Point, Line, Circle
