@@ -1,5 +1,10 @@
 # coding:utf-8
 
+import sys
+from pathlib import Path
+MAIN_PATH = Path(__file__).absolute().parent.parent.parent
+sys.insert(0, str(MAIN_PATH))
+
 import torch
 import torch.nn as nn
 
@@ -7,6 +12,7 @@ from .geo_vector import GeoVectorBuild
 from .sym_vector import SymVectorBuild
 from .construct_rel import ConstructRel
 from .parse_rel import parse_rel
+from image_structure import convert_parse_to_natural_language
 
 class RelGenerator(nn.Module):
     """This class is for relation construction of the sym, geo
@@ -98,11 +104,21 @@ class RelGenerator(nn.Module):
         
         # # # # # # # # # Parse Rel # # # # # # # # #
         
-        # parse_results (List(Dict)): each dict contains the parsed relations:
-        #   keys: {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
-        parse_results = parse_rel(
-            geo_rels=geo_rels_predictions, 
-            sym_geo_rels=sym_geo_rels_predictions, 
-            ocr_results=all_sym_info["text_symbols_str"],
-            threshold=self.cfg.threshold
-        )
+        if self.training:
+            return losses
+        else:
+            # parse_results (List(Dict)): each dict contains the parsed relations:
+            #   keys: {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
+            parse_results = parse_rel(
+                geo_rels=geo_rels_predictions, 
+                sym_geo_rels=sym_geo_rels_predictions, 
+                ocr_results=all_sym_info["text_symbols_str"],
+                threshold=self.cfg.threshold
+            )
+            
+            # List[Dict]:  {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
+            natural_language_results = []    
+            for per_parse_res in parse_results:
+                natural_language_results.append(convert_parse_to_natural_language(per_parse_res))
+            
+            return natural_language_results

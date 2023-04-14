@@ -1,7 +1,14 @@
 # coding:utf-8
 
+import sys
+from pathlib import Path
+MAIN_PATH = Path(__file__).absolute().parent.parent.parent
+sys.insert(0, str(MAIN_PATH))
+
 import torch
 import torch.nn as nn
+
+from image_structure import convert_parse_to_natural_language
 
 class GeotoGeo(nn.Module):
         

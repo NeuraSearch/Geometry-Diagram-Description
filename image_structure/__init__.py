@@ -6,4 +6,4 @@ from .geo_ins import GeoList
 
 from .image_list import to_image_list
 
-from .primitives import Point, Line, Circle
+from .primitives import Point, Line, Circle, convert_parse_to_natural_language
