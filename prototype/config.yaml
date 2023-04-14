@@ -38,3 +38,4 @@ rel_args:
   geo_rel_size: 64
   sym_rel_size: 64
   weak_mask: 0.5
+  threshold: 0.5
