@@ -6,6 +6,7 @@ import torch.nn as nn
 from .geo_vector import GeoVectorBuild
 from .sym_vector import SymVectorBuild
 from .construct_rel import ConstructRel
+from .parse_rel import parse_rel
 
 class RelGenerator(nn.Module):
     """This class is for relation construction of the sym, geo
@@ -23,6 +24,8 @@ class RelGenerator(nn.Module):
         
         # build rel predict module
         self.construc_rel = ConstructRel(cfg)
+        
+        self.cfg = cfg
     
     def forward(self,
                 geo_feature_map, sym_feature_maps,
@@ -89,4 +92,17 @@ class RelGenerator(nn.Module):
             all_sym_info=all_sym_info,
             targets_geo=targets_geo,
             targets_sym=targets_sym,
+        )
+        
+        # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        
+        # # # # # # # # # Parse Rel # # # # # # # # #
+        
+        # parse_results (List(Dict)): each dict contains the parsed relations:
+        #   keys: {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
+        parse_results = parse_rel(
+            geo_rels=geo_rels_predictions, 
+            sym_geo_rels=sym_geo_rels_predictions, 
+            ocr_results=all_sym_info["text_symbols_str"],
+            threshold=self.cfg.threshold
         )
