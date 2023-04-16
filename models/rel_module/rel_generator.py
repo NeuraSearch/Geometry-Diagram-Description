@@ -117,8 +117,9 @@ class RelGenerator(nn.Module):
             )
             
             # List[Dict]:  {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
+            # !!! From here, if the rel doesn't exist, there will be no such key.
             natural_language_results = []    
             for per_parse_res in parse_results:
                 natural_language_results.append(convert_parse_to_natural_language(per_parse_res))
             
-            return natural_language_results
+            return parse_results, natural_language_results
