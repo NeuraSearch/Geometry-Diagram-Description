@@ -79,6 +79,25 @@ class SmoothedValue(object):
             max=self.max,
             value=self.value)
 
+def all_gather(data):
+    """Run all_gather on arbitrary picklable data (not necessary tensors)
+    Args:
+        data: any picklable object
+    Returns:
+        List[Data]: list of data gathered from each rank
+    """
+    world_size = get_world_size()
+    if world_size == 1:
+        return [data]
+    
+    data_list = [None] * world_size
+    # data: List[Dict, Dict, ...], each Dict is predictions of one data
+    # data_list: [ List[Dict, Dict, ...], List[Dict, Dict, ...], ... ], 
+    #   each list is a bunch of datas' predictions from a rank
+    dist.all_gather_object(data_list, data)
+    
+    return data_list
+
 def reduce_dict(input_dict, average=True):
     world_size = get_world_size()
     if world_size < 2:
