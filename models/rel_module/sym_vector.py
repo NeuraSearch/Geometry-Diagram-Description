@@ -249,6 +249,7 @@ class SymVectorBuild(nn.Module):
         # 这里加一个transforms只要resize, RandomHorizontalFlip,
         # 这里img: [W, H], -> 我们在用的时候使用np.array(img)-> [H, W, 3],
         # 然后把通道转一下, np.array(img)[:, :, ::-1]
+        # 因为原图是"RGB", 我们转为"BGR"
         
         # [W, H] -> [w_c, h_c]
         image_crop = image.crop(box[0].tolist())
