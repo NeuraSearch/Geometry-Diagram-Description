@@ -84,9 +84,10 @@ def compute_aspect_ratios(dataset, indices=None):
     if indices is None:
         indices = range(len(dataset))
     aspect_ratios=  []
-    for i in range(indices):
+    for i in indices:
         h, w = dataset.get_height_and_width(i)
         aspect_ratio = float(w) / float(h)
+        aspect_ratios.append(aspect_ratio)
     return aspect_ratios
 
 def _quantize(aspect_ratios, bins):
