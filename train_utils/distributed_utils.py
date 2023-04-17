@@ -237,7 +237,7 @@ def save_on_master(*args, **kwargs):
         torch.save(*args, **kwargs)
 
 def get_world_size():
-    if not is_dist_avail_and_initialize:
+    if not is_dist_avail_and_initialize():
         return 1
     return dist.get_world_size()
 
@@ -269,7 +269,7 @@ def init_distributed_mode(args):
     # ____________| p1 |  p2  |  p3  |  p4 |
     # local_rank  | 0  |   1  |  0   |   1 |
     # rank        | 0  |   1  |  2   |   4 |
-    if "RANK" is os.environ and "WORLD_SIZE" in os.environ:
+    if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
         args.rank = int(os.environ("RANK"))
         args.word_size = int(os.environ("WORLD_SIZE"))
         args.gpu = int(os.environ("LOCAL_RANK"))
