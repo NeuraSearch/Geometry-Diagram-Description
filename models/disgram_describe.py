@@ -36,7 +36,7 @@ class DiagramDescribe(nn.Module):
                 The Dict keys must be: "text_symbol_geo_rel", "head_symbol_geo_rel", 
                     "[None|double_|triple_|quad_|penta_]angle_symbols_geo_rel",
                     "[None|double_|triple_|quad_]bar_symbols_geo_rel",
-                    "[None|double_|parallel_]parallel_symbols_geo_rel",
+                    "[None|double_|triple_]parallel_symbols_geo_rel",
                     "perpendicular_symbols_geo_rel".
         """
         
