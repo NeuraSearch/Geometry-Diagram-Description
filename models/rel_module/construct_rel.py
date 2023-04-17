@@ -276,11 +276,11 @@ class SymtoGeo(nn.Module):
         """ construct rel between head_sym and LPL, PLP, PCP """
         head_symbol_geo_rel = None
         if contain_head and geo_matrix != None:
-            # geo_matrix: [P+L+C, h]
-            geo_matrix = torch.cat((LPL_matrix, PLP_matrix, PCP_matrix), dim=0)
-            # [P+L+C]
-            mask = torch.cat((LPL_mask, PLP_mask, PCP_mask))
-            # head_symbol_geo_rel: [#head, P+L+C]
+            # geo_matrix: [P+P+L+C, h]
+            geo_matrix = torch.cat((geo_info["points"], LPL_matrix, PLP_matrix, PCP_matrix), dim=0)
+            # [P+P+L+C]
+            mask = torch.cat((points_mask, LPL_mask, PLP_mask, PCP_mask))
+            # head_symbol_geo_rel: [#head, P+P+L+C]
             head_symbol_geo_rel = self._construct_rel_between_text_symbols_and_geo(
                 symbols=sym_info["head_symbols"],
                 geo_matrix=geo_matrix,

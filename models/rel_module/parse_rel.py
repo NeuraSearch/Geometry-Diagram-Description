@@ -195,24 +195,28 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
             this_head_rel = sym_head[which_head_ids]
             this_head_point_max_ids = torch.argmax(this_head_rel).item()
             
-            # head_sym points to LPL, PLP, PCP,
-            # since func["points"], func["lines"], func["circles"] is consistent to
-            #       func["LPL"],    funcp["PLP"],  func["PCP"]
-            # we use func["points"], func["lines"], func["circles"] to determine which geo this head points to
-            if func["points"](this_head_point_max_ids):
-                which_ids_head_point = this_head_point_max_ids - geo_start_ids["points"]
+            
+            if this_head_point_max_ids - len(points) < 0:
+                points[this_head_point_max_ids].ref_name = ocr[i]
+            
+                # head_sym points to Points, LPL, PLP, PCP,
+                # since func["points"], func["lines"], func["circles"] is consistent to
+                #       func["LPL"] - len(points),    funcp["PLP"] - len(points),  func["PCP"] - len(points)
+                # we use func["points"], func["lines"], func["circles"] to determine which geo this head points to
+            elif func["points"](this_head_point_max_ids - len(points)):
+                which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["points"]
                 x, y = resolve_LPL(points, which_ids_head_point, ocr[i])
                 if x != None:
                     parse_res["angle"].append(x)
                 points = y
-            elif func["lines"](this_head_point_max_ids):
-                which_ids_head_point = this_head_point_max_ids - geo_start_ids["lines"]
+            elif func["lines"](this_head_point_max_ids - len(points)):
+                which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["lines"]
                 x, y = resolve_PLP(lines, which_ids_head_point, ocr[i])
                 if x != None:
                     parse_res["lines"].append(x)
                 lines = y
-            elif func["circles"](this_head_point_max_ids):
-                which_ids_head_point = this_head_point_max_ids - geo_start_ids["circles"]
+            elif func["circles"](this_head_point_max_ids- len(points)):
+                which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["circles"]
                 x, y = resolve_PCP(circles, which_ids_head_point, ocr[i])
                 if x != None:
                     parse_res["angles"].append(x)
