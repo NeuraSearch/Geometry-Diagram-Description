@@ -5,7 +5,7 @@ import time
 import math
 import torch
 
-from distributed_utils import MetricLogger, SmoothedValue, is_main_process, warmup_lr_scheduler, reduce_dict
+from .distributed_utils import MetricLogger, SmoothedValue, is_main_process, warmup_lr_scheduler, reduce_dict
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
                     print_freq=50, warmup=False, scaler=None, run=None):
