@@ -1,8 +1,19 @@
-train_args:
-  data_path: "data/PGDP5K/"
+main_args:
+  train_annot_path: "data/PGDP5K/annotations/train_revised.json"
+  eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
+  test_annot_path: "data/PGDP5K/annotations/test_revised.json"
+  train_img_path: "data/PGDP5K/train"
+  eval_img_path: "data/PGDP5K/val"
+  test_img_path: "data/PGDP5K/test"
   num_classes: [1, 2, 3]
+  train_img_per_batch: 12
+  test_img_per_batch: 12
+  max_iter: 3000
 image_input:
+  min_size_train: [900, 700, 500]
   max_size_train: 1200
+  min_size_test: 700
+  max_size_test: 1200
 backbone_args:
   freeze_conv_body_at: 0
   backbone_out_channels: 128
