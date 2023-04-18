@@ -29,12 +29,6 @@ def main(args):
     # set random seed
     set_environment(args.seed)
     
-    # don't worry about the "print()", it has been force to work on the main rank
-    # by "setup_for_distributed()" after calling "init_distributed_mode()" above
-    print(args)
-    with codecs.open(os.path.join(args.output_dir, "config.json"), "w", "utf-8") as file:
-        json.dump(vars(args), file, indent=2)
-    
     # args.device: "cuda"
     # 在不同进程的时候, init_distributed_mode()通过`torch.cuda.set_device(args.gpu)`
     # 指定每个进程应该看到哪一个GPU, 因此在这里torch.device(args.device)虽然只知道"cuda",
@@ -44,7 +38,14 @@ def main(args):
     # results save path
     now = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
     results_file = f"results_{now}"
-    save_dir = str(MAIN_PATH / f"{args.save_dir}_{now}")
+    save_dir = str(MAIN_PATH / f"{args.save_dir}/{now}")
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # don't worry about the "print()", it has been force to work on the main rank
+    # by "setup_for_distributed()" after calling "init_distributed_mode()" above
+    print(args)
+    with codecs.open(os.path.join(save_dir, "config.json"), "w", "utf-8") as file:
+        json.dump(vars(args), file, indent=2)
     
     # wandb
     if is_main_process() and args.wandb_key != None:
@@ -68,7 +69,7 @@ def main(args):
     else:
         if args.is_train:
             train_sampler = torch.utils.data.RandomSampler(train_dataset)
-            eval_sampler = torch.utils.SequentialSampler(eval_dataset)
+            eval_sampler = torch.utils.data.SequentialSampler(eval_dataset)
         else:
             test_sampler = torch.utils.data.SequentialSampler(test_dataset)
     
@@ -87,7 +88,8 @@ def main(args):
             train_dataset, batch_sampler=train_batch_sampler, num_workers=args.workers,
             collate_fn=geo_data_collate_fn)
         data_loader_eval = torch.utils.data.DataLoader(
-            eval_dataset, batch_size=args.test_img_per_batch, num_workers=args.workers,
+            eval_dataset, batch_size=args.test_img_per_batch, 
+            sampler=eval_sampler, num_workers=args.workers,
             collate_fn=geo_data_collate_fn)
     else:
         # NOTE: Actually, Since test dataset is sample sequentially,
@@ -124,6 +126,7 @@ def main(args):
     # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_step_size, gamma=args.lr_gamma)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
     
+    args.start_epoch = 0
     if args.resume:
         checkpoint = torch.load(args.resume, map_location="cpu")
         model_without_ddp.load_state_dict(checkpoint["model"])
@@ -134,7 +137,7 @@ def main(args):
             scaler.load_state_dict(checkpoint["scaler"])
 
     if not args.is_train:
-        predictions = evaluate(model, data_loader_test, device=device, save_dir=save_dir)
+        predictions = evaluate(model, data_loader_test, device=device)
         os.makedirs(save_dir, exist_ok=True)
         save_file_name = f"not_train_{results_file}.json"
         with codecs.open(save_file_name, "w", "utf-8") as file:
@@ -163,7 +166,7 @@ def main(args):
         # update learning rate, should call lr_scheduler.step() after optimizer.step() in latest version of Pytorch
         lr_scheduler.step()
         
-        predictions = evaluate(model, data_loader_test, device=device, save_dir=save_dir, epoch=epoch)
+        predictions = evaluate(model, data_loader_eval, device=device)
         
         # only write in the main rank
         if args.rank in [-1, 0]:
@@ -202,7 +205,6 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_args_yaml", type=str)
-    # add_train_args(parser)
     args = parser.parse_args()
     
     import yaml
@@ -213,7 +215,6 @@ if __name__ == "__main__":
     args = vars(args)
     for _, conf in config.items():
         for key, val in conf.items():
-            # assert key in args.keys()
             args[key] = val
     
     from argparse import Namespace
@@ -222,7 +223,7 @@ if __name__ == "__main__":
     args.test_only = args.is_train == False
     print(args.test_only)
     
-    # main(args)
+    main(args)
     
     
     
