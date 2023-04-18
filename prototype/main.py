@@ -56,8 +56,8 @@ def main(args):
 
     # create dataset
     print("Loading data")
-    train_dataset, eval_dataset, test_dataset = make_data_loader(args)
-    
+    train_dataset, eval_dataset, test_dataset = make_data_loader(args, is_train=args.is_train)
+
     # create sampler
     print("Creating data loaders")
     if args.distributed:
@@ -74,13 +74,14 @@ def main(args):
             test_sampler = torch.utils.data.SequentialSampler(test_dataset)
     
     # create batch sampler
-    if args.aspect_ratio_group_factor >= 0:
-        # category indices of images into different bins according to W/H
-        group_ids = create_aspect_ratio_groups(train_dataset, k=args.aspect_ratio_group_factor)
-        train_batch_sampler = GroupBatchSampler(train_sampler, group_ids, args.train_img_per_batch)
-    else:
-        train_batch_sampler = torch.utils.data.BatchSampler(
-            train_sampler, args.train_img_per_batch, drop_last=True)
+    if args.is_train:
+        if args.aspect_ratio_group_factor >= 0:
+            # category indices of images into different bins according to W/H
+            group_ids = create_aspect_ratio_groups(train_dataset, k=args.aspect_ratio_group_factor)
+            train_batch_sampler = GroupBatchSampler(train_sampler, group_ids, args.train_img_per_batch)
+        else:
+            train_batch_sampler = torch.utils.data.BatchSampler(
+                train_sampler, args.train_img_per_batch, drop_last=True)
     
     if args.is_train:
         # create data loader
@@ -97,7 +98,7 @@ def main(args):
         data_loader_test = torch.utils.data.DataLoader(
             test_dataset, batch_size=1,
             sampler=test_sampler, num_workers=args.workers,
-            collate_fn=train_dataset.collate_fn)
+            collate_fn=geo_data_collate_fn)
     
     # create model
     print("creating model")
