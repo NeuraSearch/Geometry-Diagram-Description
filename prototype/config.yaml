@@ -1,14 +1,31 @@
 main_args:
+  is_train: True
+  project_name: "v0.8_initial_test"
+  resume: null
+  save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
   eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
   test_annot_path: "data/PGDP5K/annotations/test_revised.json"
   train_img_path: "data/PGDP5K/train"
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/PGDP5K/test"
-  num_classes: [1, 2, 3]
+  aspect_ratio_group_factor: 3
   train_img_per_batch: 12
   test_img_per_batch: 12
+  workers: 4
   max_iter: 3000
+  sync_bn: True
+  amp: True
+  print_freq: 10
+optimizer_args:
+  optimzation_method: "sgd"
+  momentum: 0.9
+  weight_decay: 0.0005
+  weight_decay_bias: 0
+  lr: 1e-3
+  bias_factor: 2
+  lr_steps: [20000, 30000, 35000]
+  lr_gamma: 0.2
 image_input:
   min_size_train: [900, 700, 500]
   max_size_train: 1200
