@@ -21,7 +21,7 @@ class DiagramDescribe(nn.Module):
         self.rel_generator = RelGenerator(cfg)
         
     def forward(self, 
-                images, images_not_tensor, 
+                images, images_not_tensor,
                 targets_det=None, targets_seg=None,
                 targets_geo=None, targets_sym=None):
         """
@@ -87,6 +87,7 @@ class DiagramDescribe(nn.Module):
                 sym_feature_maps=rel_metatdata["sym_feature_maps"],
                 proposals_seg=rel_metatdata["proposals_seg"],
                 proposals_det=rel_metatdata["proposals_det"],
+                images_not_tensor=images_not_tensor,
             )
             
             return parse_results, natural_language_results
