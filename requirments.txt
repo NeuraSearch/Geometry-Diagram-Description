@@ -1,0 +1,2 @@
+easyocr
+scikit-learn
