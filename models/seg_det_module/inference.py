@@ -433,12 +433,15 @@ class GEOPostProcessor(nn.Module):
                 line_loc = []
                 # the endpoints of line are determined by the point instances
                 for endpoint_loc in [endpoint_loc_1, endpoint_loc_2]:
-                    point_name_list.sort(key=lambda x: get_point_dist(point_locs[x], endpoint_loc))
-                    if point_name_list[0]!=nearst_point: 
-                        nearst_point = point_name_list[0]
+                    if len(point_name_list) > 1:
+                        point_name_list.sort(key=lambda x: get_point_dist(point_locs[x], endpoint_loc))
+                        if point_name_list[0]!=nearst_point: 
+                            nearst_point = point_name_list[0]
+                        else:
+                            nearst_point = point_name_list[1]
+                        line_loc.append(point_locs[nearst_point])
                     else:
-                        nearst_point = point_name_list[1]
-                    line_loc.append(point_locs[nearst_point])
+                        continue
                 locs.append(line_loc)   # [[x1, y1], [x2, y2]]
             elif class_index==3: # circle
                 point_list = np.stack(list(np.where(mask>0)),axis=-1)
