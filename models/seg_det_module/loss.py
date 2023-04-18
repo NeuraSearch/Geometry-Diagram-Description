@@ -156,7 +156,7 @@ class FCOSLossComputation(object):
         labels, reg_targets, sym_ids = self.compute_targets_for_locations(
             points_all_level, targets, expanded_object_sizes_of_interest
         )
-        
+
         # we extract the layer from which the golden GT box is based on
         # all_labels_to_layer: [{"s1": 3, "s0": 5, ...}, ...] len==bsz
         all_labels_to_layer = self.extract_golden_label_layer_num(
@@ -217,35 +217,34 @@ class FCOSLossComputation(object):
                 sym_ids: [#points_per_level] x bsz, each item is str
         """
         # e.g., [#P3, #P4, #P5] -> [#P3, #P3+#P4, #P3+#P4+#P5]
-        layer_points_num_accu = itertools.accumulate(self.num_points_per_level, operator.add)
-        assert layer_points_num_accu[-1] == labels.size(0)
+        layer_points_num_accu = list(itertools.accumulate(self.num_points_per_level, operator.add))
+        assert layer_points_num_accu[-1] == labels[0].size(0)
         
         # [{"s1": P3, "s0": P5, ...}, ...] len==bsz
         all_labels_to_layer = []
         for b_idx, label in enumerate(labels):
             # select points positions assigned to non-background
-            selected_pos = torch.nonzero(labels > 0)    # [?]
-            
-            reg_selected = reg_targets[b_idx][selected_pos]     # [?, 4]
+            selected_pos = torch.nonzero(label > 0)    # [?]
+            reg_selected = reg_targets[b_idx][selected_pos].squeeze(1)     # [?, 4]
             # a GT box might be assigned to multiple points, we select the one with highest centerness score
             center_scores = self.compute_centerness_targets(reg_selected)   # [?]
             
             la_to_layer = {}
             la_to_cs = {}
             for i, pos in enumerate(selected_pos):
-                assert label[pos] != 0 and sym_ids[pos] != "sb"
+                assert label[pos] != 0 and sym_ids[b_idx][pos] != "sb"
 
-                sym_ids  = sym_ids[pos]
+                s_id  = sym_ids[b_idx][pos]
                 layer_num = bisect.bisect_right(layer_points_num_accu, pos)
-                if sym_ids not in la_to_layer:
+                if s_id not in la_to_layer:
                     #  0  1  2  3  4
                     # P3 P4 P5 P6 P7
-                    la_to_layer[sym_ids] = layer_num + 3
-                    la_to_cs[sym_ids] = center_scores[i]
+                    la_to_layer[s_id] = layer_num + 3
+                    la_to_cs[s_id] = center_scores[i]
                 else:
-                    if center_scores[i] > la_to_cs[sym_ids]:
-                        la_to_layer[sym_ids] = layer_num + 3
-                        la_to_cs[sym_ids] = center_scores[i]
+                    if center_scores[i] > la_to_cs[s_id]:
+                        la_to_layer[s_id] = layer_num + 3
+                        la_to_cs[s_id] = center_scores[i]
             
             all_labels_to_layer.append(la_to_layer)
         
@@ -362,11 +361,11 @@ class FCOSLossComputation(object):
             # e.g., temp: [s1, s5, s2, ..., sb, s3], in #points_per_level length
             ids_per_im = targets_per_im.get_field("ids")
             temp = []
-            for sym_idx in locations_to_gt_inds:
-                if locations_to_min_area[sym_idx] == INF:
+            for i, each_point_area in enumerate(locations_to_min_area):
+                if each_point_area == INF:
                     temp.append("sb")
                 else:
-                    temp.append(ids_per_im[sym_idx])
+                    temp.append(ids_per_im[locations_to_gt_inds[i]])
             sym_ids.append(temp)
             
         # labels: [[#points_per_level], ...] x bsz, 对应的是feature map上每个点分配的label_idx
@@ -375,7 +374,6 @@ class FCOSLossComputation(object):
 
     def compute_centerness_targets(self, reg_targets):
         # reg_targets: [?, 4]
-
         left_right = reg_targets[:, [0, 2]]
         top_bottom = reg_targets[:, [1, 3]]
 
@@ -517,7 +515,7 @@ class SegLossComputation(object):
         self.delta_v = 0.5    
         self.delta_d = 3.0
         for i in range(self.class_num):
-            weight_ratio = torch.tensor([10, 1, 4])   # [10, 1, 4]
+            weight_ratio = torch.tensor([10, 1, 4][i])
             # point, line, circle的weight为什么不一样
             self.seg_loss_func.append(nn.BCEWithLogitsLoss(pos_weight=weight_ratio))
 
@@ -566,21 +564,19 @@ class SegLossComputation(object):
         gt_line_mask_for_rel = []
         gt_circle_mask_for_rel = []
         for ggeo in targets:
-            gt_point_mask_for_rel.append(ggeo.get_inst_seg_for_rel(
-                                            class_index=1,
-                                            reshape_size=reshape_size)
-                                        )
-            gt_line_mask_for_rel.append(ggeo.get_inst_seg_for_rel(
-                                            class_index=2,
-                                            reshape_size=reshape_size)
-                                        )
-            gt_circle_mask_for_rel.append(ggeo.get_inst_seg_for_rel(
-                                            class_index=3,
-                                            reshape_size=reshape_size)
-                                        )
-              
+            gt_point_mask_for_rel.append(self.get_geo_mask_to_tensor(ggeo, 1, reshape_size))
+            gt_line_mask_for_rel.append(self.get_geo_mask_to_tensor(ggeo, 2, reshape_size))
+            gt_circle_mask_for_rel.append(self.get_geo_mask_to_tensor(ggeo, 3, reshape_size))
+
         return binary_seg_loss, var_loss, dist_loss, reg_loss, gt_point_mask_for_rel, gt_line_mask_for_rel, gt_circle_mask_for_rel
 
+    def get_geo_mask_to_tensor(self, ggeo, class_index, reshape_size):
+        geos_mask = []
+        for mask in ggeo.get_inst_seg_for_rel(class_index=class_index, reshape_size=reshape_size):
+            mask = torch.from_numpy(mask).float().cuda()
+            geos_mask.append(mask)
+        return geos_mask
+                    
     def discriminative_loss(self, embedding, seg_gt):
         
         batch_size = embedding.shape[0]
