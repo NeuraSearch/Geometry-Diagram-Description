@@ -117,6 +117,7 @@ def geo_data_collate_fn(datas_list):
     targets_seg = batch[3]
     targets_geo = batch[4]
     targets_sym = batch[5]
+    images_id = batch[6]
         
     return {
         "images": images,
@@ -125,4 +126,5 @@ def geo_data_collate_fn(datas_list):
         "targets_seg": targets_seg,
         "targets_geo": targets_geo,
         "targets_sym":targets_sym,
+        "images_id": images_id,
     }
