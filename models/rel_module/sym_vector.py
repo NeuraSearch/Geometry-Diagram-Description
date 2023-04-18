@@ -239,7 +239,7 @@ class SymVectorBuild(nn.Module):
                         # -> [N, c, output_size, output_size] -> [N, c_2]
                         symbols_info[key] = self.sym_head(torch.cat(value, dim=0))
                 else:
-                    symbols_info[key] = None
+                    symbols_info[key] = []
             
             all_symbols_info.append(symbols_info)
         

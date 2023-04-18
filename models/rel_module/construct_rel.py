@@ -99,7 +99,7 @@ class GeotoGeo(nn.Module):
         circles = geo_info["circles"]   # [c, h]
 
         points_lines_rel = None
-        if points != None and lines != None:
+        if len(points) != 0 and len(lines) != 0:
             # combine point and line
             points_expand = torch.unsqueeze(points, 1)              # [p, 1, h]
             lines_expand = torch.unsqueeze(lines, 0)                # [1, l, h]
@@ -107,7 +107,7 @@ class GeotoGeo(nn.Module):
             points_lines_rel = self.combine_geo_layer(points_lines) # [p, l, 3]
 
         point_circles_rel = None
-        if points != None and circles != None:
+        if len(points) != 0 and len(circles) != 0:
             # combine point and circle
             circles_expand = torch.unsqueeze(circles, 0)                # [1, c, h]
             points_circles = points_expand + circles_expand             # [p, c, h]
@@ -237,7 +237,7 @@ class SymtoGeo(nn.Module):
                 different symbols and their possible geos.
         """
         
-        if geo_info["points"] != None and geo_info["lines"] != None:
+        if len(geo_info["points"]) != 0 and len(geo_info["lines"]) != 0:
             # [P, sym_rel_size]
             LPL_matrix, LPL_mask = self._combine_margin_middle_margin_matrix(
                 middle_geo=geo_info["points"],
@@ -252,8 +252,9 @@ class SymtoGeo(nn.Module):
             )
         else:
             LPL_matrix = LPL_mask = None
+            PLP_matrix = PLP_mask = None
         
-        if geo_info["circles"] != None and geo_info["points"] != None:
+        if len(geo_info["circles"]) != 0 and len(geo_info["points"]) != 0:
             # [C, sym_rel_size]
             PCP_matrix, PCP_mask = self._combine_margin_middle_margin_matrix(
                 middle_geo=geo_info["circles"],
@@ -269,8 +270,8 @@ class SymtoGeo(nn.Module):
         """ construct rel between text_symbol and geo """
         # geo_matrix: [P+L+P+L+C, h]
         geo_matrix = self.concat_to_matrix(geo_info["points"], geo_info["lines"], LPL_matrix, PLP_matrix, PCP_matrix)
-        points_mask = LPL_mask.new([1]).repeat(geo_info["points"].size(0)) if geo_info["points"] != None else None
-        lines_mask = PLP_mask.new([1]).repeat(geo_info["lines"].size(0)) if geo_info["lines"] != None else None
+        points_mask = LPL_mask.new([1]).repeat(geo_info["points"].size(0)) if len(geo_info["points"]) != 0 and len(geo_info["lines"]) != 0 else None
+        lines_mask = PLP_mask.new([1]).repeat(geo_info["lines"].size(0)) if len(geo_info["lines"]) != 0 and len(geo_info["points"]) != 0 else None
         # [P+L+P+L+C]
         mask = self.concat_to_matrix(points_mask, lines_mask, LPL_mask, PLP_mask, PCP_mask)
         
@@ -327,7 +328,7 @@ class SymtoGeo(nn.Module):
                         continue
                     
                 elif "parallel" in symbol_name:
-                    if each_symbol_info.size(0) > 1 and geo_info["lines"] != None:     
+                    if each_symbol_info.size(0) > 1 and len(geo_info["lines"]) != 0:     
                         sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
                             symbols=each_symbol_info,
                             geo_matrix=geo_info["lines"],
@@ -439,7 +440,11 @@ class SymtoGeo(nn.Module):
 
     @staticmethod
     def concat_to_matrix(*args):
-        to_concat_list = [vec for vec in args if vec != None]
+        to_concat_list = []
+        for vec in args:
+            if vec != None:
+                if len(vec) != 0:
+                    to_concat_list.append(vec)
         if len(to_concat_list) == 0:    # no info available
             return None
         return torch.cat(to_concat_list, dim=0)
