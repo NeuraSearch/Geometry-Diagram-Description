@@ -1,6 +1,6 @@
 main_args:
-  is_train: False
-  project_name: "v0.8_initial_test"
+  is_train: True
+  project_name: "v0.9_initial_test"
   resume: null
   save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
