@@ -25,7 +25,7 @@ class FCOSHead(torch.nn.Module):
         cls_tower = []
         bbox_tower = []
         # 3
-        for i in range(cfg.MODEL.FCOS.NUM_CONVS):
+        for i in range(cfg.rpn_num_convs):
             conv_func = nn.Conv2d
 
             cls_tower.append(
@@ -81,7 +81,7 @@ class FCOSHead(torch.nn.Module):
                     torch.nn.init.constant_(l.bias, 0)
 
         # initialize the bias for focal loss
-        prior_prob = cfg.MODEL.FCOS.PRIOR_PROB  # 0.01
+        prior_prob = 0.01  # 0.01
         bias_value = -math.log((1 - prior_prob) / prior_prob)
         torch.nn.init.constant_(self.cls_logits.bias, bias_value)
 
