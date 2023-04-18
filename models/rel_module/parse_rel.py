@@ -54,10 +54,10 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
             per_sym_geo_rel["head_symbol_geo_rel"]
         )
         
-        """ 3. parse angle congruent. """
+        """ 3. parse congruent. """
         # {"congruent_angle", "congruent_bar", "parallel", "perpendicular"}
         other_symbols_geos_rel = defaultdict(list)
-        for sym, sym_rel in per_geo_rel.items():
+        for sym, sym_rel in per_sym_geo_rel.items():
             
             if sym_rel != None:
                 
