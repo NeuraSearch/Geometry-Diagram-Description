@@ -44,7 +44,7 @@ class GeoVectorBuild(nn.Module):
     def __init__(self, cfg):
         super(GeoVectorBuild, self).__init__()
         
-        self.geo_head = GeoVectorHead(inp_channel=cfg.backbone_out_channels+64+2,
+        self.geo_head = GeoVectorHead(inp_channel=64,
                                       out_channel=cfg.geo_embed_size)
         
     
@@ -66,7 +66,7 @@ class GeoVectorBuild(nn.Module):
             all_geo_info: List[Dict]: Contain batch data geo information,
                 each dict contains geo information regarding to different classes, in Tensor([N, cfg.geo_embed_size])
         """
-        
+
         if self.training:
             assert gt_point_mask != None and gt_line_mask != None and gt_circle_mask != None
             all_geo_info = self._forward_train(feature_map, gt_point_mask, gt_line_mask, gt_circle_mask)
@@ -84,7 +84,7 @@ class GeoVectorBuild(nn.Module):
         """
         
         all_geo_info = []
-        for b_id, (points_mask, lines_mask, circles_mask) in zip(gt_point_mask, gt_line_mask, gt_circle_mask):
+        for b_id, (points_mask, lines_mask, circles_mask) in enumerate(zip(gt_point_mask, gt_line_mask, gt_circle_mask)):
             all_geo_info.append(
                 {
                     "points": self.get_mask_map(feature_map=feature_map[b_id], batch_mask=points_mask),
@@ -147,5 +147,5 @@ class GeoVectorBuild(nn.Module):
             # [N, feat_channel, h, w] -> [N, geo_embed_size]
             geo_feature = self.geo_head(torch.stack(all_mask_map, dim=0))
             return geo_feature
-
-        raise ValueError("all_mask_map should contains something.")
+        else:
+            return None
