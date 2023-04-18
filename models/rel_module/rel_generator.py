@@ -112,8 +112,8 @@ class RelGenerator(nn.Module):
             parse_results = parse_rel(
                 geo_rels=geo_rels_predictions, 
                 sym_geo_rels=sym_geo_rels_predictions, 
-                ocr_results=all_sym_info["text_symbols_str"],
-                threshold=self.cfg.threshold
+                ocr_results=[data["text_symbols_str"] for data in all_sym_info],
+                threshold=self.cfg.threshold,
             )
             
             # List[Dict]:  {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
