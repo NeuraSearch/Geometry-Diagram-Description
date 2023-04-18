@@ -349,12 +349,6 @@ class GEODataset(torch.utils.data.Dataset):
             if geo_b[0] == "l":
                 l_idx = int(geo_b[1:])
                 if rel == "endpoint":
-                    print(rel_list)
-                    print(pl_rels.size())
-                    print(points_num)
-                    print(lines_num)
-                    print(geo_classes)
-                    print()
                     pl_rels[p_idx, l_idx] = 1.
                 elif rel == "online":
                     pl_rels[p_idx, l_idx] = 2.
@@ -541,7 +535,7 @@ class GEODataset(torch.utils.data.Dataset):
                     head_sym_dict[ids] = ordinal_ids_head
                     ordinal_ids_head +=1
          
-        text_symbol_geo_rel = torch.zeros((row_len, column_len))
+        text_symbol_geo_rel = torch.zeros((row_len, column_len), dtype=torch.long)
         for rel in sym2geo:
             sym = rel[0]
             geos = rel[1]
@@ -605,7 +599,6 @@ class GEODataset(torch.utils.data.Dataset):
                                 p_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "p"]
                                 head_symbol_geo_rel[head_sym_dict[head_sym], offset + p_idx[0]] = 1.
                             else:
-                                print(rel_sym2geo)
                                 raise ValueError
                             
                             break
