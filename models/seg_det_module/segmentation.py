@@ -131,7 +131,7 @@ class SEGModule(nn.Module):
             )
         else:
             return self._forward_test(
-                binary_seg, embedding, images.image_sizes, self.cfg.MODEL.SEG.FPN_STRIDES
+                binary_seg, embedding, images.image_sizes, self.cfg.seg_fpn_strides
             )
 
     def _forward_train(self,  binary_seg, embedding, targets):
