@@ -16,11 +16,13 @@ class SmoothedValue(object):
     """
     def __init__(self, window_size=20, fmt=None):
         if fmt is None:
-            fmt = "{value:.4f} ({globle_avg:.4f})"
-            self.deque = deque(maxlen=window_size)
-            self.total = 0.0
-            self.count = 0.0
-            self.fmt = fmt
+            # value, global_avg perform like placeholder,
+            # future passing value could pass through fmt.format(value=1, global_avg=2)
+            fmt = "{value:.4f} ({global_avg:.4f})"
+        self.deque = deque(maxlen=window_size)
+        self.total = 0.0
+        self.count = 0.0
+        self.fmt = fmt
     
     def update(self, value, n=1):
         self.deque.append(value)
@@ -147,7 +149,7 @@ class MetricLogger(object):
                 v = v.item()
             assert isinstance(v, (int, float))
             self.meters[k].update(v)
-    
+        
     def __getattr__(self, attr):
         if attr in self.meters:
             return self.meters[attr]    # return SmoothedValue
@@ -187,7 +189,7 @@ class MetricLogger(object):
                                            "{meters}",
                                            "time: {time}",
                                            "data: {data}",
-                                           "max mem: {memory:.0f}"])
+                                           "max mem: {memory:.0f} MB"])
         else:
             log_msg = self.delimeter.join([header,
                                            "[{0" + space_fmt + "}/{1}]",
@@ -209,7 +211,7 @@ class MetricLogger(object):
                                          meters=str(self),
                                          time=str(iter_time),
                                          data=str(data_time),
-                                         max_mem=torch.cuda.max_memory_allocated() / MB))
+                                         memory=torch.cuda.max_memory_allocated() / MB))
                 else:
                     print(log_msg.format(i, len(iterable),
                                          eta=eta_string,
