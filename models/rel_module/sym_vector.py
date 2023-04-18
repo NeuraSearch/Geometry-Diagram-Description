@@ -24,7 +24,7 @@ class SymVectorHead(nn.Module):
             bias=True,
         ))
         head_tower.append(nn.GroupNorm(32, out_channel))
-        head_tower.append(nn.Relu())
+        head_tower.append(nn.ReLU())
         self.add_module("sym_head_tower", nn.Sequential(*head_tower))
 
         self.sym_linear = nn.Sequential(
