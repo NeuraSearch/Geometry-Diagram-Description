@@ -2,6 +2,9 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
+import numpy as np
 
 from collections import defaultdict
 
@@ -102,11 +105,13 @@ class GeoVectorBuild(nn.Module):
             
             labels = geolist.get_field("labels")    # [#geo]
             seg_masks = geolist.masks               # [h, w, #geo]
+            seg_masks = torch.from_numpy(seg_masks).float().cuda()
+            # [h, w, N] -> [H, W, N]
+            seg_masks = self.pad_mask_to_feature_map_size(seg_masks, feature_map[b_id].size()[1:])
             
             geo_info = defaultdict(list)
             for i, label_idx in enumerate(labels):
                 mask = seg_masks[:, :, i]   # [h, w]
-                
                 if label_idx == 1:
                     # [1, geo_embed_size]
                     geo_info["points"].append(self.get_mask_map(feature_map[b_id], [mask]))
@@ -123,11 +128,34 @@ class GeoVectorBuild(nn.Module):
                     # [N, geo_embed_size]
                     geo_info[key] = torch.cat(val, dim=0)
                 else:
-                    geo_info[key] = None
+                    geo_info[key] = []
             
             all_geo_info.append(geo_info)
         
         return all_geo_info
+
+    def pad_mask_to_feature_map_size(self, mask, reshape_size):
+        """Pad mask to the size of feature map.
+            During inference, the mask is cropped according to the actual image size,
+            which might be smaller than the feature map. We need to pad it.
+
+        Args:
+            mask (torch.Tensor): [h, w, N]
+            reshape_size (Tuple): [H, W]
+        Returns:
+            pad_mask (torch.Tensor): [H, W, N]
+        """
+        
+        mask_w = mask.size(1)
+        mash_h = mask.size(0)
+        reshape_w = reshape_size[1]
+        reshape_h = reshape_size[0]
+        
+        # pad starts padding from the last dimenstion
+        pad = (0, 0, 0, max(0, reshape_w - mask_w), 0, max(0, reshape_h - mash_h))
+        pad_mask = F.pad(input=mask, pad=pad, mode="constant")
+
+        return pad_mask
                 
     def get_mask_map(self, feature_map, batch_mask):
         """_summary_
@@ -148,4 +176,4 @@ class GeoVectorBuild(nn.Module):
             geo_feature = self.geo_head(torch.stack(all_mask_map, dim=0))
             return geo_feature
         else:
-            return None
+            return []
