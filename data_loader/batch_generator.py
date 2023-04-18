@@ -112,16 +112,16 @@ def geo_data_collate_fn(datas_list):
     batch = list(zip(*datas_list))
     
     images = to_image_list(batch[0], 32)
-    images_not_tensors = batch[1]
-    targets_det = batch[2]
-    targets_seg = batch[3]
-    targets_geo = batch[4]
-    targets_sym = batch[5]
-    images_id = batch[6]
+    images_not_tensor = list(batch[1])
+    targets_det = list(batch[2])
+    targets_seg = list(batch[3])
+    targets_geo = list(batch[4])
+    targets_sym = list(batch[5])
+    images_id = list(batch[6])
         
     return {
         "images": images,
-        "images_not_tensors": images_not_tensors,
+        "images_not_tensor": images_not_tensor,
         "targets_det": targets_det,
         "targets_seg": targets_seg,
         "targets_geo": targets_geo,
