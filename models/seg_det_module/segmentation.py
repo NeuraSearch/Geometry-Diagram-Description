@@ -141,10 +141,10 @@ class SEGModule(nn.Module):
             binary_seg, embedding, targets
         )
         losses = {
-            "loss_binary_seg": binary_seg_loss * self.cfg.MODEL.SEG.LOSS_RATIO_BS,
-            "loss_var": var_loss * self.cfg.MODEL.SEG.LOSS_RATIO_VAR,
-            "loss_dist": dist_loss * self.cfg.MODEL.SEG.LOSS_RATIO_DIST,
-            "loss_mean_reg": reg_loss * self.cfg.MODEL.SEG.LOSS_RATIO_REG
+            "loss_binary_seg": binary_seg_loss * self.cfg.loss_ratio_bs,
+            "loss_var": var_loss * self.cfg.loss_ratio_var,
+            "loss_dist": dist_loss * self.cfg.loss_ratio_dist,
+            "loss_mean_reg": reg_loss * self.cfg.loss_ratio_reg
         }
         return None, losses, (gt_point_mask_for_rel, gt_line_mask_for_rel, gt_circle_mask_for_rel)
 
