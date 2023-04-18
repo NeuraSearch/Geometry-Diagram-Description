@@ -5,8 +5,6 @@ import sys
 import time
 import math
 import torch
-import codecs
-import json
 
 from .distributed_utils import MetricLogger, SmoothedValue, is_main_process, warmup_lr_scheduler, reduce_dict, all_gather
 
@@ -29,16 +27,24 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
     mloss = torch.zeros(1).to(device)
     for i, batch_data in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         images = batch_data["images"]
-        images_not_tensors = batch_data["images_not_tensors"]
+        images_not_tensor = batch_data["images_not_tensor"]
         targets_det = batch_data["targets_det"]
         targets_seg = batch_data["targets_seg"]
         targets_geo = batch_data["targets_geo"]
         targets_sym = batch_data["targets_sym"]
         
-        images = list(image.to(device) for image in images)
+        images = images.to(device)
         targets_det = [target.to(device) for target in targets_det]
-        targets_geo = [target.to(device) for target in targets_geo]
-        targets_sym = [target.to(device) for target in targets_sym]
+        for idx, target in enumerate(targets_geo):
+            for key, val in target.items():
+                if val != None:
+                    target[key] = val.to(device)
+            targets_geo[idx] = target
+        for idx, target in enumerate(targets_sym):
+            for key, val in target.items():
+                if val != None:
+                    target[key] = val.to(device)
+            targets_sym[idx] = target
         # NOTE: targets_seg.masks will be used to get the targeted pixel, after that, it will be sent to GPU in model internally,
         #       images_not_tensors is for OCR, no need to put in GPU here.
 
@@ -52,7 +58,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
             #    "parallel_symbols_geo_rel_loss", "perpendicular_symbols_geo_rel_loss"}
             loss_dict = model(
                 images=images,
-                images_not_tensors=images_not_tensors,
+                images_not_tensor=images_not_tensor,
                 targets_det=targets_det,
                 targets_seg=targets_seg,
                 targets_geo=targets_geo,
@@ -90,7 +96,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         metric_logger.update(loss=loss_reduced, **loss_dict_reduced)
         now_lr = optimizer.param_groups[0]["lr"]
         metric_logger.update(lr=now_lr)
-        
+                
         # wandb is not None only on rank0
         if run != None:
             run.log({"loss_reduced": loss_reduced})
@@ -99,7 +105,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
     return mloss, now_lr
 
 @torch.no_grad()
-def evaluate(model, data_loader, device, save_dir, epoch=None):
+def evaluate(model, data_loader, device):
     cpu_device = torch.device("cpu")
     model.eval()
     metric_logger = MetricLogger(delimiter="  ")
@@ -117,9 +123,9 @@ def evaluate(model, data_loader, device, save_dir, epoch=None):
         # "targets_sym":targets_sym,
         
         images = batch_data["images"]
-        images_not_tensors = batch_data["images_not_tensors"]
+        images_not_tensor = batch_data["images_not_tensor"]
         
-        images = list(img.to(device) for img in images)
+        images = images.to(device)
         
         # we have to wait until everything has been done,
         # then we start to count
@@ -127,7 +133,7 @@ def evaluate(model, data_loader, device, save_dir, epoch=None):
             torch.cuda.synchronize(device)
         
         model_time = time.time()
-        outputs = model(images=images, images_not_tensors=images_not_tensors)
+        outputs = model(images=images, images_not_tensor=images_not_tensor)
         
         """ *** Customized Part *** """
         parse_results, natural_language_results = outputs
