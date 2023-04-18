@@ -138,7 +138,7 @@ class GEODataset(torch.utils.data.Dataset):
             # only apply Resize, RandomHorizontalFlip, so that keep [W, H] format, suitable for OCR
             images_not_tensor = self.transforms.trans_image_no_tensor(img_org)
 
-        return img, images_not_tensor, target_det, target_seg, targets_geo, targets_sym, index
+        return img, images_not_tensor, target_det, target_seg, targets_geo, targets_sym, img_id, index
 
     def __len__(self):
         return len(self.ids)
