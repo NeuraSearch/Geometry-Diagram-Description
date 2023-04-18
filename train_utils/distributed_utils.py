@@ -291,6 +291,25 @@ def init_distributed_mode(args):
     torch.distributed.barrier(device_ids=[args.rank])
     setup_for_distributed(args.rank==0)
 
+def build_optmizer(cfg, model):
+    params = []
+    for key, value in model.named_parameters():
+        if not value.requires_grad:
+            continue
+        lr = cfg.lr
+        weight_decay = cfg.weight_decay     # the weight regularization terms
+        if "bias" in key:
+            lr = lr * cfg.bias_factor
+            weight_decay = cfg.weight_decay_bias
+        params.append({"params": [value], "lr": lr, "weight_decay": weight_decay})
+    
+    if cfg.optimzation_method == "sgd":
+        optimizer = torch.optim.SGD(params, lr=cfg.lr, momentum=cfg.momentum, weight_decay=cfg.weight_decay)
+    elif cfg.optimization_method == "adam":
+        optimizer = torch.optim.Adam(params, lr=cfg.lr, betas=(0.9, 0.999), weight_decay=cfg.weight_decay)
+    
+    return optimizer
+
 def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):
     """
     Args:
