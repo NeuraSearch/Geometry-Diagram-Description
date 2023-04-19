@@ -161,7 +161,7 @@ def main(args):
         # mean_loss: gathered loss from all GPU mean.
         mean_loss, lr = train_one_epoch(model, optimizer, data_loader_train,
                                         device, epoch, args.print_freq,
-                                        warmup=True, scaler=scaler, run=run)
+                                        warmup=args.warmpup, scaler=scaler, run=run)
 
         # this external lr_scheduler adjusts lr every epoch
         # update learning rate, should call lr_scheduler.step() after optimizer.step() in latest version of Pytorch
@@ -213,13 +213,13 @@ if __name__ == "__main__":
     with codecs.open(args.train_args_yaml, "r", "utf-8") as file:
         config = yaml.safe_load(file)
     
-    args = vars(args)
+    args = vars(args)   # Namespace to dict
     for _, conf in config.items():
         for key, val in conf.items():
             args[key] = val
     
     from argparse import Namespace
-    args = Namespace(**args)
+    args = Namespace(**args)    # dict to Namespace
     print(args.resume == None)
     args.test_only = args.is_train == False
     print(args.test_only)
