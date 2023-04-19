@@ -110,6 +110,7 @@ class GeotoGeo(nn.Module):
         if len(points) != 0 and len(circles) != 0:
             # combine point and circle
             circles_expand = torch.unsqueeze(circles, 0)                # [1, c, h]
+            points_expand = torch.unsqueeze(points, 1)              # [p, 1, h]
             points_circles = points_expand + circles_expand             # [p, c, h]
             point_circles_rel = self.combine_geo_layer(points_circles)  # [p, c, 3]
         
@@ -176,7 +177,8 @@ class SymtoGeo(nn.Module):
                 sym_to_geo_rel_dict = self.construct_sym_to_geo_per_data(
                     geo_info=geo_info,
                     sym_info=sym_info,
-                    geo_rel=geo_rel)
+                    geo_rel=geo_rel,
+                )
                 
                 # calculate loss
                 per_data_loss = self.cal_sym_geo_rel_loss(
@@ -227,10 +229,10 @@ class SymtoGeo(nn.Module):
     def construct_sym_to_geo_per_data(self, geo_info, sym_info, geo_rel):
         """
         Args:
-            geo_info (Dict[]):  {"points": Tensor(P, cfg.sym_embed_size), "lines": Tensor(L, cfg.sym_embed_size), "circles": Tensor(C, cfg.sym_embed_size)}
+            geo_info (Dict[]):  {"points": Tensor(P, cfg.sym_embed_size) or [], "lines": Tensor(L, cfg.sym_embed_size), "circles": Tensor(C, cfg.sym_embed_size)}
             sym_info (Dict[]): contains symbols information  regarding to different classes, 
-                except for the "text_symbols_str" key, other keys' values are in Tensor[?, cfg.sym_embed_size].
-            geo_rel (Dict[Tensor(P, ?)]): keys: "pl_rels", "pc_rels"
+                except for the "text_symbols_str" key, other keys' values are in Tensor[?, cfg.sym_embed_size] or [].
+            geo_rel (Dict[Tensor(P, ?)]): keys: "pl_rels", "pc_rels", value: Tessor or None.
             
         Returns:
             sym_to_geo_rel_dict (Dict[]): contains the relation score ([0, 1]) between the 
@@ -268,10 +270,10 @@ class SymtoGeo(nn.Module):
         sym_to_geo_rel_dict = {}
         
         """ construct rel between text_symbol and geo """
-        # geo_matrix: [P+L+P+L+C, h]
+        # geo_matrix: [P+L+P+L+C, h] or None
         geo_matrix = self.concat_to_matrix(geo_info["points"], geo_info["lines"], LPL_matrix, PLP_matrix, PCP_matrix)
-        points_mask = LPL_mask.new([1]).repeat(geo_info["points"].size(0)) if len(geo_info["points"]) != 0 and len(geo_info["lines"]) != 0 else None
-        lines_mask = PLP_mask.new([1]).repeat(geo_info["lines"].size(0)) if len(geo_info["lines"]) != 0 and len(geo_info["points"]) != 0 else None
+        points_mask = geo_info["points"][0].new([1]).repeat(geo_info["points"].size(0)) if len(geo_info["points"]) != 0 else None
+        lines_mask = geo_info["lines"][0].new([1]).repeat(geo_info["lines"].size(0)) if len(geo_info["lines"]) != 0 else None
         # [P+L+P+L+C]
         mask = self.concat_to_matrix(points_mask, lines_mask, LPL_mask, PLP_mask, PCP_mask)
         
@@ -348,10 +350,10 @@ class SymtoGeo(nn.Module):
         """construct relation between text_symbols and P, L, LPL, PLP, PCP, head_symbol(optional).
 
         Args:
-            symbols (Tensor(N, sym_embed_size))
-            geo_matrix (Tensor(P+L+P+L+C, h))
-            mask (Tensor(P+L+P+L+C))
-            head_symbol (Tensor(?, h)): optional.
+            symbols (Tensor(N, sym_embed_size)) or []
+            geo_matrix (Tensor(P+L+P+L+C, h)) or None
+            mask (Tensor(P+L+P+L+C)) or None
+            head_symbol (Tensor(?, h)): optional or None
         
         Returns:
             text_symbol_geo_rel: [N, P+L+P+L+C, 1]
@@ -363,7 +365,7 @@ class SymtoGeo(nn.Module):
             add_mask = mask.new([1]).repeat(head_symbol.size(0))
             # [P+L+P+L+C+?]
             mask = torch.cat((mask, add_mask))
-            
+        
         geo_matrix = self.geo_matrix_layer(geo_matrix)
         
         text_symbols_expand = symbols.unsqueeze(1).repeat(1, geo_matrix.size(0), 1)  # [N, P+L+P+L+C, h]
@@ -392,13 +394,19 @@ class SymtoGeo(nn.Module):
         for sym_geo_key in per_data_sym_to_geo_rel_dict.keys():
             
             pred_logits = per_data_sym_to_geo_rel_dict[sym_geo_key]
-            
-            if pred_logits != None:
-                target_ids = target[sym_geo_key]
-                per_data_loss[sym_geo_key] = self.bce_with_logits_loss(input=pred_logits.squeeze(-1), target=target_ids.to(torch.float))
-            
-            else:
-                per_data_loss[sym_geo_key] = None
+            try:
+                if pred_logits != None:
+                    target_ids = target[sym_geo_key]
+                    per_data_loss[sym_geo_key] = self.bce_with_logits_loss(input=pred_logits.squeeze(-1), target=target_ids.to(torch.float))
+                
+                else:
+                    per_data_loss[sym_geo_key] = None
+            except ValueError:
+                
+                print("Second: ", seg.get_field("ids"))
+                print(pred_logits.size())
+                print(target_ids.size())
+                raise ValueError
         
         return per_data_loss
     
@@ -499,7 +507,7 @@ class ConstructRel(nn.Module):
         # geo_rels_predictions: [{"pl_rels": List[Tensor(P, L)], "pc_rels": List[Tensor(P, C)]}] len==bsz
         #                       already use argmax select from [0, 1, 2].
         # geo_rel_losses: {"pl_loss": Tensor, "pc_loss": Tensor}
-        geo_rels_predictions, geo_rel_losses =  self.geo2geo(all_geo_info, targets_geo)
+        geo_rels_predictions, geo_rel_losses = self.geo2geo(all_geo_info, targets_geo)
         
         # # # # # # # # # # # # # # # # # # # # # # # # # # #
         
@@ -514,7 +522,8 @@ class ConstructRel(nn.Module):
             all_geo_info=all_geo_info,
             all_sym_info=all_sym_info,
             all_geo_rels=targets_geo if self.training else geo_rels_predictions,
-            targets_sym=targets_sym)
+            targets_sym=targets_sym,
+        )
     
         # # # # # # # # # # # # # # # # # # # # # # # # # # #
         
