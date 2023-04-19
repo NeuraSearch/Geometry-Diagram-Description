@@ -26,6 +26,7 @@ class GEODataset(torch.utils.data.Dataset):
         "triple angle","triple bar","triple parallel",
         "quad angle", "quad bar", 
         "penta angle", 
+        "arrow"
     ]
     CLASSES_GEO = [
         "__background__", 
@@ -124,7 +125,7 @@ class GEODataset(torch.utils.data.Dataset):
             
             # 3.3 get targets_geo
             targets_geo, (points_num, lines_num, circles_num) = self.get_geo2geo_rel(annot_each, target_seg)
-            
+     
             targets_sym = self.get_sym2geo_rel(
                 annot_each=annot_each,
                 target_det=target_det,
@@ -159,6 +160,7 @@ class GEODataset(torch.utils.data.Dataset):
         """
         boxes, classes, text_contents, ids, classes_text = [], [], [], [], []
         # arrow and others primitives are excluded 
+        arrow_offset = 0
         for obj in symbols:
             # 若不是"text"&"arrow":
             #   classes: 加入symbol class idx
@@ -166,7 +168,16 @@ class GEODataset(torch.utils.data.Dataset):
             #   boxes: 加入[x,y,w,h]
             #   text_contents: 加入 text_content
             #   ids: s0, s1, s2
-            if obj["sym_class"]!='text' and obj["sym_class"]!='arrow':
+            # !!! Not sure why original code remove "arrow", we add here
+            
+            if obj["sym_class"] == "arrow":
+                classes.append(self.class_sym_to_ind[obj["sym_class"]])
+                classes_text.append(-1)
+                boxes.append(obj["bbox"])
+                text_contents.append(obj["text_content"])
+                ids.append(obj["id"])
+                continue              
+            if obj["sym_class"]!='text':
                 classes.append(self.class_sym_to_ind[obj["sym_class"]])
                 classes_text.append(-1)
                 boxes.append(obj["bbox"])
@@ -331,9 +342,9 @@ class GEODataset(torch.utils.data.Dataset):
         
         pl_rels = None
         pc_rels = None
-        if lines_num != 0:
+        if points_num != 0 and lines_num != 0:
             pl_rels = torch.zeros((points_num, lines_num), dtype=torch.float)
-        if circles_num != 0:
+        if points_num != 0 and circles_num != 0:
             pc_rels = torch.zeros((points_num, circles_num), dtype=torch.float)
         
         geo2geo = annot_each["relations"]["geo2geo"]
@@ -509,17 +520,24 @@ class GEODataset(torch.utils.data.Dataset):
     def get_text_symbol_geo_rel(self, sym_labels, sym_ids, sym2geo, sym2sym, points_num, lines_num, circles_num):
         
         # P + L + LPL + PLP + PCP
-        column_len = points_num + lines_num + points_num + lines_num + circles_num
+        # !!! I think there's a bug in the original code,
+        #       the points_num for LPL, and lines_num for PLP should be zero if:
+        #       no line available for LPL, and no point available for PLP.
+        # Hence, we create lpl_num, plp_num, pcp_num.
+        lpl_num = points_num if lines_num != 0 else 0
+        plp_num = lines_num if points_num != 0 else 0
+        pcp_num = circles_num if points_num != 0 else 0
+        column_len = points_num + lines_num + lpl_num + plp_num + pcp_num
         row_len = sym_labels.tolist().count(self.CLASSES_SYM.index("text"))
-        
+   
         head_sym_num = 0
         head_symbol_geo_rel = None
         if len(sym2sym) != 0:
             for rel in sym2sym:
-                if len(rel[1]) == 1:
+                if len(rel[1]) == 1 and (sym_labels.tolist()[int(rel[1][0][1:])] == self.CLASSES_SYM.index("head")):
                     head_sym_num +=1
             if head_sym_num != 0:
-                head_symbol_geo_rel = torch.zeros((head_sym_num, points_num + points_num + lines_num + circles_num), dtype=torch.long)
+                head_symbol_geo_rel = torch.zeros((head_sym_num, points_num + lpl_num + plp_num + pcp_num), dtype=torch.long)
                 column_len += head_sym_num
         
         text_sym_dict = {}
@@ -527,15 +545,18 @@ class GEODataset(torch.utils.data.Dataset):
         ordinal_ids = 0
         ordinal_ids_head = 0
         for i, ids in enumerate(sym_ids):
-            if sym_labels[i] == self.CLASSES_SYM.index("text"):
+            if sym_labels.tolist()[i] == self.CLASSES_SYM.index("text"):
                 text_sym_dict[ids] = ordinal_ids
                 ordinal_ids +=1
             if head_symbol_geo_rel != None:
-                if sym_labels[i] == self.CLASSES_SYM.index("head"):
+                if sym_labels.tolist()[i] == self.CLASSES_SYM.index("head"):
                     head_sym_dict[ids] = ordinal_ids_head
                     ordinal_ids_head +=1
-         
-        text_symbol_geo_rel = torch.zeros((row_len, column_len), dtype=torch.long)
+        
+        if row_len != 0 and column_len != 0:
+            text_symbol_geo_rel = torch.zeros((row_len, column_len), dtype=torch.long)
+        else:
+            text_symbol_geo_rel = None
         for rel in sym2geo:
             sym = rel[0]
             geos = rel[1]
@@ -546,6 +567,7 @@ class GEODataset(torch.utils.data.Dataset):
                         text_symbol_geo_rel[text_sym_dict[sym], int(geos[0][1:])] = 1.
                     elif geos[0][1] == "l":
                         offset = points_num
+         
                         text_symbol_geo_rel[text_sym_dict[sym], offset + int(geos[0][1:])] = 1.
                     else:
                         raise ValueError
@@ -558,11 +580,11 @@ class GEODataset(torch.utils.data.Dataset):
                         p_idx = [int(geo[1:]) for geo in geos if geo[0] == "p"]
                         text_symbol_geo_rel[text_sym_dict[sym], offset + p_idx[0]] = 1.
                     elif l_num == 1 and p_num == 2: # PLP
-                        offset = points_num + lines_num + points_num
+                        offset = points_num + lines_num + lpl_num
                         l_idx = [int(geo[1:]) for geo in geos if geo[0] == "l"]
                         text_symbol_geo_rel[text_sym_dict[sym], offset + l_idx[0]] = 1.
                     elif c_num == 1 and p_num == 2: # PCP
-                        offset = points_num + lines_num + points_num + lines_num
+                        offset = points_num + lines_num + lpl_num + plp_num
                         c_idx = [int(geo[1:]) for geo in geos if geo[0] == "c"]
                         text_symbol_geo_rel[text_sym_dict[sym], offset + c_idx[0]] = 1.
                     else:
@@ -573,7 +595,7 @@ class GEODataset(torch.utils.data.Dataset):
             for rel in sym2sym:
                 if len(rel[1]) == 1:
                     head_sym = rel[1][0]
-                    offset = points_num + lines_num + points_num + lines_num + circles_num
+                    offset = points_num + lines_num + lpl_num + plp_num + pcp_num
                     text_symbol_geo_rel[text_sym_dict[rel[0]], offset + head_sym_dict[head_sym]] = 1.
                     
                     for rel_sym2geo in sym2geo:
@@ -587,11 +609,11 @@ class GEODataset(torch.utils.data.Dataset):
                                 p_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "p"]
                                 head_symbol_geo_rel[head_sym_dict[head_sym], offset + p_idx[0]] = 1.
                             elif l_num == 1 and p_num == 2: # PLP
-                                offset = points_num + points_num
+                                offset = points_num + lpl_num
                                 l_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "l"]
                                 head_symbol_geo_rel[head_sym_dict[head_sym], offset + l_idx[0]] = 1.
                             elif c_num == 1 and p_num == 2: # PCP
-                                offset = points_num + points_num + lines_num
+                                offset = points_num + lpl_num + plp_num
                                 c_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "c"]
                                 head_symbol_geo_rel[head_sym_dict[head_sym], offset + c_idx[0]] = 1.
                             elif p_num == 1:
@@ -610,11 +632,11 @@ class GEODataset(torch.utils.data.Dataset):
         sym_dict = {}
         ordinal_ids = 0
         for i, ids in enumerate(sym_ids):
-            if sym_labels[i] == self.CLASSES_SYM.index(sym_type):
+            if sym_labels.tolist()[i] == self.CLASSES_SYM.index(sym_type):
                 sym_dict[ids] = ordinal_ids
                 ordinal_ids +=1
         
-        if ordinal_ids == 0:
+        if ordinal_ids == 0 or num == 0:
             return None
         
         symbol_geo_rel = torch.zeros((ordinal_ids, num), dtype=torch.long)
