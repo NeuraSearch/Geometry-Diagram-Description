@@ -111,7 +111,7 @@ class GeoVectorBuild(nn.Module):
             
             geo_info = defaultdict(list)
             for i, label_idx in enumerate(labels):
-                mask = seg_masks[:, :, i]   # [h, w]
+                mask = seg_masks[:, :, i]   # [h, w] !!! We assume the mask is not empty during inference.
                 if label_idx == 1:
                     # [1, geo_embed_size]
                     geo_info["points"].append(self.get_mask_map(feature_map[b_id], [mask]))
