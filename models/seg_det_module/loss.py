@@ -160,7 +160,7 @@ class FCOSLossComputation(object):
         # we extract the layer from which the golden GT box is based on
         # all_labels_to_layer: [{"s1": 3, "s0": 5, ...}, ...] len==bsz
         all_labels_to_layer = self.extract_golden_label_layer_num(
-            labels, reg_targets, sym_ids
+            labels, reg_targets, sym_ids, targets
         )
 
         # 循环每个batch
@@ -207,7 +207,7 @@ class FCOSLossComputation(object):
         """
         return labels_level_first, reg_targets_level_first, all_labels_to_layer
 
-    def extract_golden_label_layer_num(self, labels, reg_targets, sym_ids):
+    def extract_golden_label_layer_num(self, labels, reg_targets, sym_ids, targets):
         """For train, this is used to find out the feature map on which the GT box is mapped on,
             so that we could extract the feature vector for the GT box on the correct layer of feature map.
         
@@ -245,7 +245,15 @@ class FCOSLossComputation(object):
                     if center_scores[i] > la_to_cs[s_id]:
                         la_to_layer[s_id] = layer_num + 3
                         la_to_cs[s_id] = center_scores[i]
-            
+
+            ids_per_img = targets[b_idx].get_field("ids")
+
+            # !!! some target box might has not been allocated to any point,
+            #     by default, we assign to layer_3
+            for ids in ids_per_img:
+                if ids not in la_to_layer:
+                    la_to_layer[ids] = 3
+                        
             all_labels_to_layer.append(la_to_layer)
         
         return all_labels_to_layer
@@ -366,6 +374,7 @@ class FCOSLossComputation(object):
                     temp.append("sb")
                 else:
                     temp.append(ids_per_im[locations_to_gt_inds[i]])
+
             sym_ids.append(temp)
             
         # labels: [[#points_per_level], ...] x bsz, 对应的是feature map上每个点分配的label_idx
