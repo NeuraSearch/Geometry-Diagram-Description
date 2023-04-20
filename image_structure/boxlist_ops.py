@@ -189,7 +189,12 @@ def cat_boxlist(bboxes):
             cat_boxes.add_field(field, content_new)
         else:
             # !!! to add non-tensor field, e.g., "layers"
-            content = list(itertools.chain(*content))
-            cat_boxes.add_field(field, content)
-
+            try:
+                content = list(itertools.chain(*content))
+                cat_boxes.add_field(field, content)
+            except TypeError:
+                print(field)
+                print(content)
+                exit()
+                
     return cat_boxes
