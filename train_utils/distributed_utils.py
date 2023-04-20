@@ -281,6 +281,7 @@ def init_distributed_mode(args):
     else:
         print('Not using distributed mode')
         args.distributed = False
+        args.rank = -1  # use one GPU, we set rank==-1
         return
         
     args.distributed = True
