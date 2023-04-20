@@ -174,11 +174,7 @@ def main(args):
         lr_scheduler.step()
         
         print(f"[Epoch: {epoch}] starts evaluation ...")
-<<<<<<< HEAD
         predictions = evaluate(model, data_loader_eval, device=device, logger=logger)
-=======
-        predictions = evaluate(model, data_loader_eval, device=device)
->>>>>>> b522a840c121bd214f01d47a55b17bbb5338706d
         
         # only write in the main rank
         if args.rank in [-1, 0]:
