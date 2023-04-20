@@ -461,8 +461,9 @@ class GEOPostProcessor(nn.Module):
         # masks: [H, W], ...
         # classes: {1,2,3}, ...
         
-        # [H, W, num_of_instance]
-        masks_new = np.stack(masks, axis=-1).astype(np.uint8)*255
+        if len(masks) != 0:
+            # [H, W, num_of_instance]
+            masks_new = np.stack(masks, axis=-1).astype(np.uint8)*255
         ids = []
         id_num = [0, 0, 0]
         # 分配 p0,p1, l0,l1, c0,c1
@@ -477,7 +478,8 @@ class GEOPostProcessor(nn.Module):
 
         pred_seg = GeoList(masks_new, size)
         pred_seg.add_field("labels", classes)
-        pred_seg.add_field("locs", self.get_parse_loc(classes, masks, ids))
+        if len(masks) != 0:
+            pred_seg.add_field("locs", self.get_parse_loc(classes, masks, ids))
         pred_seg.add_field("ids", ids)
 
         return pred_seg
