@@ -145,7 +145,7 @@ class FCOSPostProcessor(nn.Module):
             - image_sizes: [H, W]
         """
         
-        sampled_boxes = []  # [ [BoxList, ...] x bsz, ... ] x 5
+        sampled_boxes = []  # [ [BoxList, ...] x bsz, ... ] x layer_num, BoxList is one data predicted boxes in one layer
         for layer_num, (l, o, b, c) in enumerate(zip(locations, box_cls, box_regression, centerness)):
             """
                 l: Tensor(h_n * w_n, 2)
@@ -153,7 +153,6 @@ class FCOSPostProcessor(nn.Module):
                 b: Tensor(b, 4, h_n, w_n)
                 c: Tensor(b, 1, h_n, w_n)
             """
-            # sampled_boxes[-1]: [BoxList, ...] x bsz
             sampled_boxes.append(
                 self.forward_for_single_feature_map(
                     l, o, b, c, image_sizes, layer_num+3
@@ -163,21 +162,25 @@ class FCOSPostProcessor(nn.Module):
         # [ (P3_B1, P3_B2, ... , P3_BN), (P4_B1, P4_B2, ... , P4_BN), (P7_B1, P7_B2, ... , P7_BN)]
         # [ (P3_B1, P4_B1, ... , P7_B1), (P3_B2, P4_B2, ... , P7_B2), ... ] 5层
         boxlists = list(zip(*sampled_boxes))
+        # Next we concat one data all layer BoxList together
         # [ BoxList(#box, 4), BoxList(#box, 4), ... ] len==bsz
         boxlists = [cat_boxlist(boxlist) for boxlist in boxlists]
         if not self.bbox_aug_enabled:
             # boxlists: List[ [BoxList, ...] ], len(boxlists) = bsz
             boxlists = self.select_over_all_levels(boxlists)
         
-        # TODO
         # Filter out candidates with low scores 
         score_thresh = 0.50
+        # Still [ BoxList(#box_1, 4), BoxList(#box_2, 4), ... ] len==bsz,
+        # but the number of box for each data is different now
         boxlists = [choose_confident_boxes(boxlist, score_thresh) for boxlist in boxlists]
         # Filter out the overlapped candidates
+        # Still [ BoxList(#box_1_1, 4), BoxList(#box_2_2, 4), ... ] len==bsz,
+        # but after NMS, the number of box for each data is lower
         nms_thresh=0.9
         boxlists = [boxlist_nms(boxlist, nms_thresh) for boxlist in boxlists]
         
-        for index in range(len(boxlists)):
+        for index in range(len(boxlists)):  # index: each data
             ids = []
             # generate ids of non-geometric primitives
             for num in range(len(boxlists[index])):
