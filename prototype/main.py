@@ -167,6 +167,7 @@ def main(args):
         # update learning rate, should call lr_scheduler.step() after optimizer.step() in latest version of Pytorch
         lr_scheduler.step()
         
+        print(f"[Epoch: {epoch}] starts evaluation ...")
         predictions = evaluate(model, data_loader_eval, device=device)
         
         # only write in the main rank
