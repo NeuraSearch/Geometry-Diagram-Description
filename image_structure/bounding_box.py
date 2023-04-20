@@ -216,9 +216,15 @@ class BoxList(object):
                 # !!! the item should be int index, rather than boolean value
                 if len(item.tolist()) != 0:
                     v_new = itemgetter(*item.tolist())(v)
+                    # if *item.tolist() is one index, the v_new will be a singel int,
+                    # else, it will be a tuple.
+                    if isinstance(v_new, tuple):
+                        v_new = list(v_new)
+                    else:
+                        v_new = [v_new]
                     bbox.add_field(k, v_new)
-                else:
-                    bbox.add_field(k, [])
+                # else:
+                #     bbox.add_field(k, [])
             
         return bbox
 
