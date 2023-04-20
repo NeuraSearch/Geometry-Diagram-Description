@@ -19,7 +19,7 @@ from train_utils import init_distributed_mode, create_aspect_ratio_groups, \
         GroupBatchSampler, \
             train_one_epoch, evaluate, \
                 save_on_master, set_environment, \
-                    is_main_process, build_optmizer
+                    is_main_process, build_optmizer, create_logger
 from data_loader import make_data_loader, geo_data_collate_fn
 
 def main(args):
@@ -40,6 +40,12 @@ def main(args):
     results_file = f"results_{now}"
     save_dir = str(MAIN_PATH / f"{args.save_dir}/{now}")
     os.makedirs(save_dir, exist_ok=True)
+    
+    # create logger
+    if is_main_process():
+        logger = create_logger(log_dir=save_dir)
+    else:
+        logger = None
     
     # don't worry about the "print()", it has been force to work on the main rank
     # by "setup_for_distributed()" after calling "init_distributed_mode()" above
@@ -138,7 +144,7 @@ def main(args):
             scaler.load_state_dict(checkpoint["scaler"])
 
     if not args.is_train:
-        predictions = evaluate(model, data_loader_test, device=device)
+        predictions = evaluate(model, data_loader_test, device=device, logger=logger)
         os.makedirs(save_dir, exist_ok=True)
         save_file_name = f"not_train_{results_file}.json"
         with codecs.open(save_file_name, "w", "utf-8") as file:
@@ -161,13 +167,14 @@ def main(args):
         # mean_loss: gathered loss from all GPU mean.
         mean_loss, lr = train_one_epoch(model, optimizer, data_loader_train,
                                         device, epoch, args.print_freq,
-                                        warmup=args.warmpup, scaler=scaler, run=run)
+                                        warmup=args.warmpup, scaler=scaler, run=run, logger=logger)
 
         # this external lr_scheduler adjusts lr every epoch
         # update learning rate, should call lr_scheduler.step() after optimizer.step() in latest version of Pytorch
         lr_scheduler.step()
         
-        predictions = evaluate(model, data_loader_eval, device=device)
+        print(f"[Epoch: {epoch}] starts evaluation ...")
+        predictions = evaluate(model, data_loader_eval, device=device, logger=logger)
         
         # only write in the main rank
         if args.rank in [-1, 0]:
@@ -225,6 +232,3 @@ if __name__ == "__main__":
     print(args.test_only)
     
     main(args)
-    
-    
-    

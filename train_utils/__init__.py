@@ -1,4 +1,4 @@
-from .distributed_utils import init_distributed_mode, save_on_master, set_environment, is_main_process, get_world_size, build_optmizer
+from .distributed_utils import init_distributed_mode, save_on_master, set_environment, is_main_process, get_world_size, build_optmizer, create_logger
 
 from .group_by_aspect_ratio import create_aspect_ratio_groups, GroupBatchSampler
 

@@ -9,9 +9,9 @@ import torch
 from .distributed_utils import MetricLogger, SmoothedValue, is_main_process, warmup_lr_scheduler, reduce_dict, all_gather
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
-                    print_freq=50, warmup=False, scaler=None, run=None):
+                    print_freq=50, warmup=False, scaler=None, run=None, logger=None):
     model.train()
-    metric_logger = MetricLogger(delimiter="  ")
+    metric_logger = MetricLogger(delimiter="  ", logger=logger)
     metric_logger.add_meter("lr", SmoothedValue(window_size=1, fmt="{value:.6f}"))
     header = f"Epoch: [{epoch}]"
     
@@ -105,10 +105,10 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
     return mloss, now_lr
 
 @torch.no_grad()
-def evaluate(model, data_loader, device):
+def evaluate(model, data_loader, device, logger=None):
     cpu_device = torch.device("cpu")
     model.eval()
-    metric_logger = MetricLogger(delimiter="  ")
+    metric_logger = MetricLogger(delimiter="  ", logger=logger)
     header = "Test: "
     
     # TODO: define the metric here, e.g., accuracy

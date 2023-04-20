@@ -1,8 +1,10 @@
 # coding:utf-8
 
 import os
+import sys
 import time
 import datetime
+import logging
 import random
 import numpy as np
 import torch
@@ -138,10 +140,11 @@ def reduce_dict_nonelegant(input_dict, average=True):
     return output
 
 class MetricLogger(object):
-    def __init__(self, delimiter="\t"):
+    def __init__(self, delimiter="\t", logger=None):
         # a dict, whose value is SmoothedValue, and key is the metric name
         self.meters = defaultdict(SmoothedValue)
         self.delimeter = delimiter
+        self.logger = logger
     
     def update(self, **kwargs):
         for k, v in kwargs.items():
@@ -206,18 +209,41 @@ class MetricLogger(object):
                 eta_second = iter_time.global_avg * (len(iterable) - i)
                 eta_string = str(datetime.timedelta(seconds=eta_second))
                 if torch.cuda.is_available():
-                    print(log_msg.format(i, len(iterable),
-                                         eta=eta_string,
-                                         meters=str(self),
-                                         time=str(iter_time),
-                                         data=str(data_time),
-                                         memory=torch.cuda.max_memory_allocated() / MB))
+                    if self.logger == None:
+                        print(log_msg.format(i, len(iterable),
+                                            eta=eta_string,
+                                            meters=str(self),
+                                            time=str(iter_time),
+                                            data=str(data_time),
+                                            memory=torch.cuda.max_memory_allocated() / MB))
+                    else:
+                        if is_main_process():   # actually redudant check, self.logger wll not be created on non-main process
+                            self.logger.info(log_msg.format(
+                                                i, len(iterable),
+                                                eta=eta_string,
+                                                meters=str(self),
+                                                time=str(iter_time),
+                                                data=str(data_time),
+                                                memory=torch.cuda.max_memory_allocated() / MB
+                                                )
+                                            )
                 else:
-                    print(log_msg.format(i, len(iterable),
-                                         eta=eta_string,
-                                         meters=str(self),
-                                         time=str(iter_time),
-                                         data=str(data_time)))
+                    if self.logger == None:
+                        print(log_msg.format(i, len(iterable),
+                                            eta=eta_string,
+                                            meters=str(self),
+                                            time=str(iter_time),
+                                            data=str(data_time)))
+                    else:   # only single process in CPU mode
+                        self.logger.info(log_msg.format(
+                                            i, len(iterable),
+                                            eta=eta_string,
+                                            meters=str(self),
+                                            time=str(iter_time),
+                                            data=str(data_time),
+                                            memory=torch.cuda.max_memory_allocated() / MB
+                                            )
+                                        )
             i +=1
             end = time.time()
         total_time = time.time() - start_time
@@ -333,3 +359,26 @@ def set_environment(seed=17, set_cuda=True):
     torch.manual_seed(seed)
     if torch.cuda.is_available() and set_cuda:
         torch.cuda.manual_seed_all(seed)
+
+def create_logger(name=None, silent=False, to_disk=True, log_dir=None):
+    logging.getLogger('PIL').setLevel(logging.WARNING)  # we don't want the PIL log
+    log = logging.getLogger(name)
+    log.setLevel(logging.DEBUG)
+    log.propogate = False
+    
+    formatter = logging.Formatter(fmt="%(asctime)s %(message)s", datefmt="%m/%d/%Y %H:%M:%S")
+    
+    if not silent:
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(logging.INFO)
+        # ch.setFormatter(formatter)
+        log.addHandler(ch)
+    
+    if to_disk:
+        log_file = os.path.join(log_dir, datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S.log"))
+        fh = logging.FileHandler(log_file)
+        fh.setLevel(logging.DEBUG)
+        # fh.addFormatter(formatter)
+        log.addHandler(fh)
+    
+    return log
