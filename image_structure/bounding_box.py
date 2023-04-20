@@ -1,6 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
 
+from operator import itemgetter
+
 # transpose
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
@@ -209,8 +211,14 @@ class BoxList(object):
             if isinstance(v, torch.Tensor):
                 bbox.add_field(k, v[item])
             else:
-                v_new = [v[index] for index in range(len(v)) if item[index]==True]
-                bbox.add_field(k, v_new)
+                # v_new = [v[index] for index in range(len(v)) if item[index]==True]
+                # bbox.add_field(k, v_new)
+                # !!! the item should be int index, rather than boolean value
+                if len(item.tolist()) != 0:
+                    v_new = itemgetter(*item.tolist())(v)
+                    bbox.add_field(k, v_new)
+                else:
+                    bbox.add_field(k, [])
             
         return bbox
 
