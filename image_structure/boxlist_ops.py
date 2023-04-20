@@ -169,12 +169,17 @@ def cat_boxlist(bboxes):
     assert isinstance(bboxes, (list, tuple))
     assert all(isinstance(bbox, BoxList) for bbox in bboxes)
 
+    # bboxes: list[BoxList], each BoxList is all boxes in one layer,
+    # here, "size" refers to the image size.
     size = bboxes[0].size
     assert all(bbox.size == size for bbox in bboxes)
     mode = bboxes[0].mode
     assert all(bbox.mode == mode for bbox in bboxes)
     fields = set(bboxes[0].fields())
     assert all(set(bbox.fields()) == fields for bbox in bboxes)
+    # bbox.bbox: [#_box_in_that_layer, 4]
+    # _cat([bbox.bbox for bbox in bboxes], dim=0): [#_box_in_all_laters, 4]
+    # cat_boxes: new created BoxList
     cat_boxes = BoxList(_cat([bbox.bbox for bbox in bboxes], dim=0), size, mode)
 
     for field in fields:
