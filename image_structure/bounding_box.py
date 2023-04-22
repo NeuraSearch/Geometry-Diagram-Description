@@ -223,8 +223,8 @@ class BoxList(object):
                     else:
                         v_new = [v_new]
                     bbox.add_field(k, v_new)
-                # else:
-                #     bbox.add_field(k, [])
+                else:
+                    bbox.add_field(k, [])
             
         return bbox
 
