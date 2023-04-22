@@ -40,7 +40,7 @@ def main(args):
     results_file = f"results_{now}"
     save_dir = str(MAIN_PATH / f"{args.save_dir}/{now}")
     os.makedirs(save_dir, exist_ok=True)
-    
+
     # create logger
     if is_main_process():
         logger = create_logger(log_dir=save_dir)
@@ -135,12 +135,13 @@ def main(args):
     
     args.start_epoch = 0
     if args.resume:
-        checkpoint = torch.load(args.resume, map_location="cpu")
+        print(f"Restore model from {os.path.join(str(MAIN_PATH / args.save_dir), args.resume)}")
+        checkpoint = torch.load(os.path.join(str(MAIN_PATH / args.save_dir), args.resume), map_location="cpu")
         model_without_ddp.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optimizer"])
         lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
         args.start_epoch = checkpoint["epoch"] + 1
-        if args.map and "scaler" in checkpoint:
+        if args.amp and "scaler" in checkpoint:
             scaler.load_state_dict(checkpoint["scaler"])
 
     if not args.is_train:
@@ -184,7 +185,7 @@ def main(args):
             
             os.makedirs(save_dir, exist_ok=True)
             save_file_name = f"{epoch}_{results_file}.json"
-            with codecs.open(save_file_name, "w", "utf-8") as file:
+            with codecs.open(os.path.join(save_dir, save_file_name), "w", "utf-8") as file:
                 json.dump(predictions, file, indent=2)
                 
             # only save weights in main rank
