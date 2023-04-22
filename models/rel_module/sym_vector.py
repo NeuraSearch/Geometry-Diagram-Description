@@ -177,6 +177,7 @@ class SymVectorBuild(nn.Module):
     def _forward_test(self, feature_maps, proposals_det, images):
         
         all_symbols_info = []
+        
         for b_id, batch_det in enumerate(proposals_det):
             bboxes = batch_det.bbox
             labels = batch_det.get_field("labels")
