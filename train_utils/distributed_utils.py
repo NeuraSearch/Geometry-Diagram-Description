@@ -332,7 +332,7 @@ def build_optmizer(cfg, model):
             weight_decay = cfg.weight_decay_bias
         params.append({"params": [value], "lr": lr, "weight_decay": weight_decay})
     
-    if cfg.optimzation_method == "sgd":
+    if cfg.optimization_method == "sgd":
         optimizer = torch.optim.SGD(params, lr=cfg.lr, momentum=cfg.momentum, weight_decay=cfg.weight_decay)
     elif cfg.optimization_method == "adam":
         optimizer = torch.optim.Adam(params, lr=cfg.lr, betas=(0.9, 0.999), weight_decay=cfg.weight_decay)
