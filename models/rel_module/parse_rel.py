@@ -12,7 +12,7 @@ from collections import defaultdict
 
 from image_structure import Point, Line, Circle
 
-is_function = lambda min, max, x: min <= x < max
+is_function = lambda x, min, max: min <= x < max
 
 def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
     """Main function to parse the relations.
@@ -41,7 +41,7 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
         """ 1. parse points, lines, circles objects, and geo relations. """
         points, lines, circles = parse_geo_rel_per_data(per_geo_rel)
         
-        if len(points) == len(lines) == len(circles) == 0:
+        if len(points) == 0:
             parse_results.append(None)
             continue
         
@@ -115,7 +115,7 @@ def parse_geo_rel_per_data(geo_rel):
     
     """ Extract Points and Circles """
     if pc_rels != None:
-        num_points = pl_rels.size(0)
+        num_points = pc_rels.size(0)
         num_circles = pc_rels.size(1)
         
         if len(points) == 0:    # we will reuse points if list already contains points objects
@@ -123,10 +123,10 @@ def parse_geo_rel_per_data(geo_rel):
         circles = [Circle(ids=i) for i in range(num_circles)]
         
         for p in range(num_points):
-            for c in range(num_lines):
-                if pl_rels[p, c].item() == 1:
+            for c in range(num_circles):
+                if pc_rels[p, c].item() == 1:
                     circles[c].rel_on_circle_points.append(points[p])
-                elif pl_rels[p, c].item() == 2:
+                elif pc_rels[p, c].item() == 2:
                     circles[c].rel_center_points.append(points[p])
     
     return points, lines, circles
@@ -141,7 +141,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
         circles (List[Circle]): _description_
         sym_head (Tensor[N_sh, P+L+C]): relations between head symbols and LPL, PLP, PCP.
     """
-    
+
     # {"angle", "length"}
     parse_res = defaultdict(list)
     
@@ -153,9 +153,8 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
     
     """ parse text symbol and geo, head rel. """
     total_text_sym = text_sym_geo_rel.size(0)
-    
     for i in range(total_text_sym):
-        max_ids = torch.argmax(total_text_sym[i]).item()
+        max_ids = torch.argmax(text_sym_geo_rel[i]).item()
         
         # if relevant to P, L, C, we just assign ocr of this sym to P, L, C
         if func["points"](max_ids):
@@ -178,13 +177,15 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
         
         elif func["PLP"](max_ids):
             which_line_ids = max_ids - geo_start_ids["PLP"]
-            x, y = resolve_PLP(lines, which_circle_ids, ocr_str)
+            ocr_str = ocr[i]
+            x, y = resolve_PLP(lines, which_line_ids, ocr_str)
             if x != None:
                 parse_res["length"].append(x)
             lines = y
         
         elif func["PCP"](max_ids):
             which_circle_ids = max_ids - geo_start_ids["PCP"]
+            ocr_str = ocr[i]
             x, y = resolve_PCP(circles, which_circle_ids, ocr_str)
             if x != None:
                 parse_res["angle"].append(x)
@@ -243,7 +244,7 @@ def build_ids_assignment(points, lines, circles, sym_head):
         
         if total_num > 0:
             geo_start_ids[geo] = prev_end
-            func[geo] = partial(is_function, min=prev_end, end=prev_end+total_num)
+            func[geo] = partial(is_function, min=prev_end, max=prev_end+total_num)
             prev_end += total_num
         else:
             func[geo] = partial(is_function, min=-10, max=-5)
