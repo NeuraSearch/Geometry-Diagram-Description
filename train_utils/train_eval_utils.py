@@ -114,7 +114,7 @@ def evaluate(model, data_loader, device, logger=None):
     # TODO: define the metric here, e.g., accuracy
     
     predictions = {}
-    for batch_data in metric_logger.log_every(data_loader, 100, header):
+    for batch_data in metric_logger.log_every(data_loader, 10, header):
         # "images": images,
         # "images_not_tensors": images_not_tensors,
         # "targets_det": targets_det,
@@ -134,7 +134,7 @@ def evaluate(model, data_loader, device, logger=None):
         
         model_time = time.time()
         outputs = model(images=images, images_not_tensor=images_not_tensor)
-        
+                
         """ *** Customized Part *** """
         parse_results, natural_language_results = outputs
         natural_language_results_with_id = {img_id: natural_language_results[idx] for idx, img_id in enumerate(batch_data["images_id"])}
