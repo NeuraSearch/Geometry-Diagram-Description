@@ -103,26 +103,32 @@ class GeoVectorBuild(nn.Module):
         all_geo_info = []
         for b_id, geolist in enumerate(proposals_seg):
             
-            labels = geolist.get_field("labels")    # [#geo]
-            seg_masks = geolist.masks               # [h, w, #geo]
-            seg_masks = torch.from_numpy(seg_masks).float().cuda()
-            # [h, w, N] -> [H, W, N]
-            seg_masks = self.pad_mask_to_feature_map_size(seg_masks, feature_map[b_id].size()[1:])
-            
             geo_info = defaultdict(list)
-            for i, label_idx in enumerate(labels):
-                mask = seg_masks[:, :, i]   # [h, w] !!! We assume the mask is not empty during inference.
-                if label_idx == 1:
-                    # [1, geo_embed_size]
-                    geo_info["points"].append(self.get_mask_map(feature_map[b_id], [mask]))
-                elif label_idx == 2:
-                    # [1, geo_embed_size]
-                    geo_info["line"].append(self.get_mask_map(feature_map[b_id], [mask]))
-                elif label_idx == 3:
-                    # [1, geo_embed_size]
-                    geo_info["circle"].append(self.get_mask_map(feature_map[b_id], [mask]))
-            
-            for key in ["points", "line", "circle"]:
+            if geolist == None:
+                geo_info["points"] = []
+                geo_info["lines"] = []
+                geo_info["circles"] = []
+            else:
+                labels = geolist.get_field("labels")    # [#geo]
+                seg_masks = geolist.masks               # [h, w, #geo]
+                seg_masks = torch.from_numpy(seg_masks).float().cuda()
+                # [h, w, N] -> [H, W, N]
+                seg_masks = self.pad_mask_to_feature_map_size(seg_masks, feature_map[b_id].size()[1:])
+                
+                
+                for i, label_idx in enumerate(labels):
+                    mask = seg_masks[:, :, i]   # [h, w] !!! We assume the mask is not empty during inference.
+                    if label_idx == 1:
+                        # [1, geo_embed_size]
+                        geo_info["points"].append(self.get_mask_map(feature_map[b_id], [mask]))
+                    elif label_idx == 2:
+                        # [1, geo_embed_size]
+                        geo_info["lines"].append(self.get_mask_map(feature_map[b_id], [mask]))
+                    elif label_idx == 3:
+                        # [1, geo_embed_size]
+                        geo_info["circles"].append(self.get_mask_map(feature_map[b_id], [mask]))
+                
+            for key in ["points", "lines", "circles"]:
                 val = geo_info[key]
                 if len(val) != 0:
                     # [N, geo_embed_size]
