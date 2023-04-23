@@ -100,7 +100,10 @@ def convert_parse_to_natural_language(parse_result):
         elif rel_name == "perpendicular":
             for point_list in rel_results:
                 for point in point_list:
-                    line_0 = point.rel_endpoint_lines[0]
-                    line_1 = point.rel_endpoint_lines[1]
+                    if len(point.rel_endpoint_lines) > 1:
+                        line_0 = point.rel_endpoint_lines[0]
+                        line_1 = point.rel_endpoint_lines[1]
                 
-                    natural_language_results[rel_name].append(f"Line {str(line_0)} is perpendicular to Line {str(line_1)} at Point {str(point)}.")
+                        natural_language_results[rel_name].append(f"Line {str(line_0)} is perpendicular to Line {str(line_1)} at Point {str(point)}.")
+                    else:
+                        continue

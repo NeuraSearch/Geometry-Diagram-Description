@@ -56,7 +56,7 @@ def main(args):
     # wandb
     if is_main_process() and args.wandb_key != None:
         wandb.login(key=args.wandb_key)
-        run = wandb.init(project=f"{args.project_name}_{now}", config=args)
+        run = wandb.init(name=f"{now}", project=f"{args.project_name}", config=args)
     else:
         run = None
 

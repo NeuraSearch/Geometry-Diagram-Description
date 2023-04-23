@@ -371,11 +371,14 @@ def extract_congruent_geo(symbol_geo_rel, geo):
     
     results = []
     for i in range(total_angles):
-        _, select_p_idx = torch.topk(symbol_geo_rel[i], 2)
-        temp = []
-        for idx in select_p_idx.tolist():
-            temp.append(geo[idx])
-        results.append(temp)
+        if symbol_geo_rel[i].size(-1) >= 2:
+            _, select_p_idx = torch.topk(symbol_geo_rel[i], 2)
+            temp = []
+            for idx in select_p_idx.tolist():
+                temp.append(geo[idx])
+            results.append(temp)
+        else:
+            continue
     
     return results
 

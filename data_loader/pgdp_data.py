@@ -72,6 +72,9 @@ class GEODataset(torch.utils.data.Dataset):
             self.contents = json.load(file)
         for key in self.contents.keys():
             self.ids.append(key)
+            
+        if self.cfg.toy_data:
+            self.ids = self.ids[:100]
 
     def __getitem__(self, index):
         

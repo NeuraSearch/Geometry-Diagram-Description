@@ -4,7 +4,8 @@ main_args:
   resume: null
   save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
-  eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
+  # eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
+  eval_annot_path: "data/PGDP5K/annotations/train_revised.json"
   test_annot_path: "data/PGDP5K/annotations/test_revised.json"
   train_img_path: "data/PGDP5K/train"
   eval_img_path: "data/PGDP5K/val"
@@ -19,9 +20,11 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  wandb_key: null
   epochs: 50
   warmpup: False
+  toy_data: True
 optimizer_args:
   optimization_method: "adam"
   momentum: 0.9
