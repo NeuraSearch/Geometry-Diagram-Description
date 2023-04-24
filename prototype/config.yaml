@@ -1,11 +1,11 @@
 main_args:
   is_train: True
   project_name: "v0.9_initial_test"
+  backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
   resume: null
   save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
-  # eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
-  eval_annot_path: "data/PGDP5K/annotations/train_revised.json"
+  eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
   test_annot_path: "data/PGDP5K/annotations/test_revised.json"
   train_img_path: "data/PGDP5K/train"
   eval_img_path: "data/PGDP5K/val"

@@ -19,7 +19,8 @@ from train_utils import init_distributed_mode, create_aspect_ratio_groups, \
         GroupBatchSampler, \
             train_one_epoch, evaluate, \
                 save_on_master, set_environment, \
-                    is_main_process, build_optmizer, create_logger
+                    is_main_process, build_optmizer, create_logger, \
+                        load_from_url
 from data_loader import make_data_loader, geo_data_collate_fn
 
 def main(args):
@@ -132,6 +133,10 @@ def main(args):
     # build lr_scheduler
     # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_step_size, gamma=args.lr_gamma)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
+    
+    # load backbone weights
+    assert args.backbone_weights != None
+    load_from_url(model_without_ddp, args.backbone_weights)
     
     args.start_epoch = 0
     if args.resume:

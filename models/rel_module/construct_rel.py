@@ -8,9 +8,17 @@ class GeotoGeo(nn.Module):
     def __init__(self, geo_embed_size, geo_rel_size):
         super(GeotoGeo, self).__init__()
         
-        self.combine_geo_layer = nn.Sequential(
-            nn.Linear(geo_embed_size, geo_rel_size),
+        self.combine_point_line_layer = nn.Sequential(
+            nn.Linear(2 * geo_embed_size, geo_rel_size),
             nn.ReLU(),
+            nn.LayerNorm(geo_rel_size),
+            nn.Linear(geo_rel_size, 3)
+        )
+
+        self.combine_point_circle_layer = nn.Sequential(
+            nn.Linear(2 * geo_embed_size, geo_rel_size),
+            nn.ReLU(),
+            nn.LayerNorm(geo_rel_size),
             nn.Linear(geo_rel_size, 3)
         )
         
@@ -101,18 +109,18 @@ class GeotoGeo(nn.Module):
         points_lines_rel = None
         if len(points) != 0 and len(lines) != 0:
             # combine point and line
-            points_expand = torch.unsqueeze(points, 1)              # [p, 1, h]
-            lines_expand = torch.unsqueeze(lines, 0)                # [1, l, h]
-            points_lines = points_expand + lines_expand             # [p, l, h]
-            points_lines_rel = self.combine_geo_layer(points_lines) # [p, l, 3]
+            points_expand = torch.unsqueeze(points, 1).repeat(1, lines.size(0), 1)              # [p, l, h]
+            lines_expand = torch.unsqueeze(lines, 0).repeat(points.size(0), 1, 1)               # [p, l, h]
+            points_lines = torch.cat((points_expand, lines_expand), dim=2)                      # [p, l, 2h]
+            points_lines_rel = self.combine_point_line_layer(points_lines) # [p, l, 3]
 
         point_circles_rel = None
         if len(points) != 0 and len(circles) != 0:
             # combine point and circle
-            circles_expand = torch.unsqueeze(circles, 0)                # [1, c, h]
-            points_expand = torch.unsqueeze(points, 1)              # [p, 1, h]
-            points_circles = points_expand + circles_expand             # [p, c, h]
-            point_circles_rel = self.combine_geo_layer(points_circles)  # [p, c, 3]
+            points_expand = torch.unsqueeze(points, 1).repeat(1, circles.size(0), 1)             # [p, c, h]
+            circles_expand = torch.unsqueeze(circles, 0).repeat(points.size(0), 1, 1)            # [p, c, h]
+            points_circles = torch.cat((points_expand, circles_expand), dim=2)                   # [p, c, 2h]
+            point_circles_rel = self.combine_point_circle_layer(points_circles)  # [p, c, 3]
         
         return points_lines_rel, point_circles_rel
 
