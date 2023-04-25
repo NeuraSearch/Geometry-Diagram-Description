@@ -1,8 +1,8 @@
 main_args:
   is_train: True
-  project_name: "v0.9_initial_test"
+  project_name: "v0.9_det_seg_test"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
-  resume: "2023_04_24-22_19_34/best.pth"
+  resume: null
   save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
   eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
@@ -11,18 +11,17 @@ main_args:
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/PGDP5K/test"
   aspect_ratio_group_factor: 3
-  train_img_per_batch: 10
-  test_img_per_batch: 10
+  train_img_per_batch: 4
+  test_img_per_batch: 4
   workers: 8
-  max_iter: 3000
   sync_bn: True
   amp: False
-  print_freq: 1m  
+  print_freq: 1
   seed: 42
   device: "cuda"
-  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  wandb_key: null
-  epochs: 70
+  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  # wandb_key: null
+  epochs: 100
   warmpup: False
   toy_data: False
   #  only_train_rel  only_parse
@@ -39,7 +38,7 @@ optimizer_args:
   weight_decay_bias: 0
   lr: 1.0e-3
   bias_factor: 2
-  lr_steps: [15, 30, 50]
+  lr_steps: [30, 50, 70]
   lr_gamma: 0.2
 image_input:
   min_size_train: [900, 700, 500]

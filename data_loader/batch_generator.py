@@ -23,7 +23,6 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
 
         images_per_gpu = images_per_batch // num_gpus
         shuffle = True
-        num_iters = cfg.max_iter
     else:
         images_per_batch = cfg.test_img_per_batch
         assert (
@@ -32,7 +31,6 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
                 of GPUs ({num_gpus}) used."
         images_per_gpu = images_per_batch // num_gpus
         shuffle = False if not is_distributed else True
-        num_iters = None
         start_iter = 0
     
     if images_per_gpu > 1:
