@@ -79,7 +79,7 @@ class GeotoGeo(nn.Module):
         for geo_info in all_geo_info:
             pl_rel_logits_per_data, pc_rel_logits_per_data = self.construct_geo_to_geo_per_data(geo_info)
             
-            if pl_rel_logits_per_data !=  None:
+            if pl_rel_logits_per_data != None:
                 pl_rel_per_data = torch.argmax(pl_rel_logits_per_data, dim=-1)      # [p, l]
                 pl_rels.append(pl_rel_per_data)
             else:
