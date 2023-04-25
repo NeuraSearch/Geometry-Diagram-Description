@@ -13,8 +13,8 @@ class GeoVectorHead(nn.Module):
     def __init__(self, inp_channel, out_channel):
         super(GeoVectorHead, self).__init__()
         
-        head_tower = []
-        head_tower.append(
+        point_head_tower = []
+        point_head_tower.append(
             nn.Conv2d(
                 in_channels=inp_channel,
                 out_channels=out_channel,
@@ -24,23 +24,62 @@ class GeoVectorHead(nn.Module):
                 bias=True,
             )
         )
-        head_tower.append(nn.GroupNorm(32, out_channel))
-        head_tower.append(nn.ReLU())
-        self.add_module("geo_head_tower", nn.Sequential(*head_tower))
+        point_head_tower.append(nn.GroupNorm(32, out_channel))
+        point_head_tower.append(nn.ReLU())
+        self.add_module("geo_point_head_tower", nn.Sequential(*point_head_tower))
 
-    def forward(self, feature):
+        line_head_tower = []
+        line_head_tower.append(
+            nn.Conv2d(
+                in_channels=inp_channel,
+                out_channels=out_channel,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                bias=True,
+            )
+        )
+        line_head_tower.append(nn.GroupNorm(32, out_channel))
+        line_head_tower.append(nn.ReLU())
+        self.add_module("geo_line_head_tower", nn.Sequential(*line_head_tower))
+
+        circle_head_tower = []
+        circle_head_tower.append(
+            nn.Conv2d(
+                in_channels=inp_channel,
+                out_channels=out_channel,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                bias=True,
+            )
+        )
+        circle_head_tower.append(nn.GroupNorm(32, out_channel))
+        circle_head_tower.append(nn.ReLU())
+        self.add_module("geo_circle_head_tower", nn.Sequential(*circle_head_tower))
+        
+    def forward(self, feature, geo_type):
         """
             feature: [N, c, h, w], N is the aggregate of the points (or lines, or circles) in one data.
+            geo_type: str, "point" or "line" or "circle".
         """
         
         # tower_out: [N, geo_embed_size, h, w]
-        tower_out = self.geo_head_tower(feature)
-        
+        if geo_type == "point":
+            tower_out = self.geo_point_head_tower(feature)
+        elif geo_type == "line":
+            tower_out = self.geo_line_head_tower(feature)
+        elif geo_type == "circle":
+            tower_out = self.geo_circle_head_tower(feature)
+        else:
+            raise ValueError(f"Unknown geo_type: ({geo_type})")
+            
         # flatten to [N, geo_embed_size, h*w]
         tower_out = tower_out.flatten(start_dim=2)
         
-        # [N, geo_embed_size]
-        return tower_out.sum(dim=-1)
+        # adopot GlobalMeanPooling, [N, geo_embed_size]
+        # ??? alternative: GlobalMaxPooling, tower_out.max(dim=-1)[0]
+        return tower_out.mean(dim=-1)
 
 class GeoVectorBuild(nn.Module):
     
@@ -90,9 +129,9 @@ class GeoVectorBuild(nn.Module):
         for b_id, (points_mask, lines_mask, circles_mask) in enumerate(zip(gt_point_mask, gt_line_mask, gt_circle_mask)):
             all_geo_info.append(
                 {
-                    "points": self.get_mask_map(feature_map=feature_map[b_id], batch_mask=points_mask),
-                    "lines": self.get_mask_map(feature_map=feature_map[b_id], batch_mask=lines_mask),
-                    "circles": self.get_mask_map(feature_map=feature_map[b_id], batch_mask=circles_mask),
+                    "points": self.get_mask_map(feature_map=feature_map[b_id], batch_mask=points_mask, geo_type="point"),
+                    "lines": self.get_mask_map(feature_map=feature_map[b_id], batch_mask=lines_mask, geo_type="line"),
+                    "circles": self.get_mask_map(feature_map=feature_map[b_id], batch_mask=circles_mask, geo_type="circle"),
                 }
             )
             
@@ -120,13 +159,13 @@ class GeoVectorBuild(nn.Module):
                     mask = seg_masks[:, :, i]   # [h, w] !!! We assume the mask is not empty during inference.
                     if label_idx == 1:
                         # [1, geo_embed_size]
-                        geo_info["points"].append(self.get_mask_map(feature_map[b_id], [mask]))
+                        geo_info["points"].append(self.get_mask_map(feature_map[b_id], [mask], geo_type="point"))
                     elif label_idx == 2:
                         # [1, geo_embed_size]
-                        geo_info["lines"].append(self.get_mask_map(feature_map[b_id], [mask]))
+                        geo_info["lines"].append(self.get_mask_map(feature_map[b_id], [mask], geo_type="line"))
                     elif label_idx == 3:
                         # [1, geo_embed_size]
-                        geo_info["circles"].append(self.get_mask_map(feature_map[b_id], [mask]))
+                        geo_info["circles"].append(self.get_mask_map(feature_map[b_id], [mask], geo_type="circle"))
                 
             for key in ["points", "lines", "circles"]:
                 val = geo_info[key]
@@ -163,15 +202,17 @@ class GeoVectorBuild(nn.Module):
 
         return pad_mask
                 
-    def get_mask_map(self, feature_map, batch_mask):
+    def get_mask_map(self, feature_map, batch_mask, geo_type):
         """_summary_
 
         Args:
             feature_map (Tensor(feat_channel, h, w)): feature map of a data.
             batch_mask (List[Tensor(h, w)]): mask for a bunch of geos.
+            geo_type: str, "point" or "line" or "circle".
         """
         all_mask_map = []
         for mask in batch_mask:
+            # expand mask[h,w] to channel size [c,h,w]
             # [h, w] -> [feat_channel, h, w]
             mask_expand = mask.unsqueeze(0).repeat(feature_map.size(0), 1, 1)
             # [feat_channel, h, w] * [feat_channel, h, w] = [feat_channel, h, w]
@@ -179,7 +220,7 @@ class GeoVectorBuild(nn.Module):
                 
         if len(all_mask_map) > 0:
             # [N, feat_channel, h, w] -> [N, geo_embed_size]
-            geo_feature = self.geo_head(torch.stack(all_mask_map, dim=0))
+            geo_feature = self.geo_head(feature=torch.stack(all_mask_map, dim=0), geo_type=geo_type)
             return geo_feature
         else:
             return []
