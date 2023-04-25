@@ -526,7 +526,7 @@ class SegLossComputation(object):
         self.delta_v = 0.5    
         self.delta_d = 3.0
         for i in range(self.class_num):
-            weight_ratio = torch.tensor([10, 1, 4][i])
+            weight_ratio = torch.tensor([[10, 1, 4][i]])
             # point, line, circle的weight为什么不一样
             self.seg_loss_func.append(nn.BCEWithLogitsLoss(pos_weight=weight_ratio))
 
