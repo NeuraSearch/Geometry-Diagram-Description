@@ -339,7 +339,9 @@ class FCOSLossComputation(object):
             #     于是, 第一步我们先把上面(1)不再GT Box, (2)不满足层感受野大小设置的, 面积置为一个很大的值INF
             locations_to_gt_area[is_in_boxes == 0] = INF
             locations_to_gt_area[is_cared_in_the_level == 0] = INF
-
+            # !!! we don't want to assign point to label "arrow", as we don't want to train this label.
+            locations_to_gt_area[:, labels_per_im == 17] = INF  
+            
             # 每一个level的每一个中心点只能有一个分配的真实box
             # if there are still more than one objects for a location,
             # we choose the one with minimal area
