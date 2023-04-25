@@ -20,6 +20,8 @@ class DiagramDescribe(nn.Module):
         
         self.rel_generator = RelGenerator(cfg)
         
+        self.cfg = cfg
+        
     def forward(self, 
                 images, images_not_tensor,
                 targets_det=None, targets_seg=None,
@@ -51,25 +53,28 @@ class DiagramDescribe(nn.Module):
                 targets_seg=targets_seg,
             )
             
-            # rel_losses: {"pl_loss": Tensor, "pc_loss": Tensor,
-            #              "text_symbol_geo_rel_loss", "head_symbol_geo_rel_loss",
-            #              "angle_symbols_geo_rel_loss", "bar_symbols_geo_rel_loss",
-            #              "parallel_symbols_geo_rel_loss", "perpendicular_symbols_geo_rel_loss"}
-            rel_losses = self.rel_generator(
-                geo_feature_map=rel_metatdata["geo_feature_map"],
-                sym_feature_maps=rel_metatdata["sym_feature_maps"],
-                gt_point_mask=rel_metatdata["gt_point_mask"],
-                gt_line_mask=rel_metatdata["gt_line_mask"],
-                gt_circle_mask=rel_metatdata["gt_circle_mask"],
-                targets_det=rel_metatdata["targets_det"],
-                all_labels_to_layer=rel_metatdata["all_labels_to_layer"],
-                targets_geo=targets_geo,
-                targets_sym=targets_sym,
-            )
-            
+            if not self.cfg.only_parse:
+                # rel_losses: {"pl_loss": Tensor, "pc_loss": Tensor,
+                #              "text_symbol_geo_rel_loss", "head_symbol_geo_rel_loss",
+                #              "angle_symbols_geo_rel_loss", "bar_symbols_geo_rel_loss",
+                #              "parallel_symbols_geo_rel_loss", "perpendicular_symbols_geo_rel_loss"}
+                rel_losses = self.rel_generator(
+                    geo_feature_map=rel_metatdata["geo_feature_map"],
+                    sym_feature_maps=rel_metatdata["sym_feature_maps"],
+                    gt_point_mask=rel_metatdata["gt_point_mask"],
+                    gt_line_mask=rel_metatdata["gt_line_mask"],
+                    gt_circle_mask=rel_metatdata["gt_circle_mask"],
+                    targets_det=rel_metatdata["targets_det"],
+                    all_labels_to_layer=rel_metatdata["all_labels_to_layer"],
+                    targets_geo=targets_geo,
+                    targets_sym=targets_sym,
+                )
+                
             losses = {}
             losses.update(det_seg_losses)
-            losses.update(rel_losses)
+            
+            if not self.cfg.only_parse:
+                losses.update(rel_losses)
             
             return losses
         
@@ -77,17 +82,22 @@ class DiagramDescribe(nn.Module):
             
             rel_metatdata = self.det_seg_model(images=images)
             
-            # !!! All keys below doesn't exist if such relation is None, unlike others.
-            # parse_results (List(Dict)): each Dict is a data prediction, containing keys: 
-            # {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}.
-            # # List[Dict]:  each Dict is a data prediction, containing keys: 
-            # {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
-            parse_results, natural_language_results = self.rel_generator(
-                geo_feature_map=rel_metatdata["geo_feature_map"],
-                sym_feature_maps=rel_metatdata["sym_feature_maps"],
-                proposals_seg=rel_metatdata["proposals_seg"],
-                proposals_det=rel_metatdata["proposals_det"],
-                images_not_tensor=images_not_tensor,
-            )
+            if not self.cfg.only_parse:
+                # !!! All keys below doesn't exist if such relation is None, unlike others.
+                # parse_results (List(Dict)): each Dict is a data prediction, containing keys: 
+                # {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}.
+                # # List[Dict]:  each Dict is a data prediction, containing keys: 
+                # {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
+                parse_results, natural_language_results = self.rel_generator(
+                    geo_feature_map=rel_metatdata["geo_feature_map"],
+                    sym_feature_maps=rel_metatdata["sym_feature_maps"],
+                    proposals_seg=rel_metatdata["proposals_seg"],
+                    proposals_det=rel_metatdata["proposals_det"],
+                    images_not_tensor=images_not_tensor,
+                )
+            
+            else:
+                dummy_results = [{"A": 1} for _ in range(self.cfg.test_img_per_batch)]
+                return dummy_results, dummy_results
             
             return parse_results, natural_language_results

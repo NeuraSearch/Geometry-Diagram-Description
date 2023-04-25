@@ -25,7 +25,8 @@ main_args:
   epochs: 70
   warmpup: False
   toy_data: False
-  separate: True
+  only_train_rel: False
+  only_parse: True
 optimizer_args:
   optimization_method: "adam"
   momentum: 0.9
