@@ -55,18 +55,18 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
         )
         
         """ 3. parse congruent. """
-        # {"congruent_angle", "congruent_bar", "parallel", "perpendicular"}
+        # {"[]angle_symbols", "bar_symbols", "parallel_symbols", "perpendicular"}
         other_symbols_geos_rel = defaultdict(list)
         for sym, sym_rel in per_sym_geo_rel.items():
             
             if sym_rel != None:
                 
                 if "angle" in sym:
-                    other_symbols_geos_rel["congruent_angle"].append(extract_congruent_geo(sym_rel, points))
+                    other_symbols_geos_rel[sym].append(extract_congruent_geo(sym_rel, points))
                 elif "bar" in sym:
-                    other_symbols_geos_rel["congruent_bar"].append(extract_congruent_geo(sym_rel, lines))
+                    other_symbols_geos_rel[sym].append(extract_congruent_geo(sym_rel, lines))
                 elif "parallel" in sym:
-                    other_symbols_geos_rel["parallel"].append(extract_congruent_geo(sym_rel, lines))
+                    other_symbols_geos_rel[sym].append(extract_congruent_geo(sym_rel, lines))
                 elif "perpendicular" in sym:
                     other_symbols_geos_rel["perpendicular"].append(extract_perperdicular_geo(sym_rel, points))
 
@@ -280,18 +280,17 @@ def extract_congruent_geo(symbol_geo_rel, geo):
     
     total_angles = symbol_geo_rel.size(0)
     
+    idx_cache = []
     results = []
     for i in range(total_angles):
-        if symbol_geo_rel[i].size(-1) >= 2:
-            _, select_p_idx = torch.topk(symbol_geo_rel[i], 2)
-            temp = []
-            for idx in select_p_idx.tolist():
-                temp.append(geo[idx])
-            results.append(temp)
+        select_geo_idx = torch.argmax(symbol_geo_rel[i]).item()
+        if select_geo_idx not in idx_cache:
+            idx_cache.append(select_geo_idx)
+            results.append(select_geo_idx)
         else:
             continue
     
-    return results
+    return results if len(results) > 1 else None
 
 def extract_perperdicular_geo(perpendicular_geo_rel, geo):
     
