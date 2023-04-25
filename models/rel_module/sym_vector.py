@@ -50,6 +50,7 @@ class SymVectorHead(nn.Module):
         
 class SymVectorBuild(nn.Module):
     
+    # this is not used
     sym_lists = ["text_symbols", "text_symbols_str",
                  "perpendicular_symbols", "head_symbols",
                  "angle_symbols", "double_angle_symbols", "triple_angle_symbols", "quad_angle_symbols", "penta_angle_symbols",
@@ -62,7 +63,32 @@ class SymVectorBuild(nn.Module):
         self.roi_output_size = cfg.sym_roi_output_size
         self.fpn_strides = cfg.fpn_strides
         
-        self.sym_head = SymVectorHead(
+        self.text_sym_head = SymVectorHead(
+            inp_channel=cfg.backbone_out_channels,
+            out_channel=cfg.sym_embed_size,
+            kernel_size=self.roi_output_size,
+        )
+        self.head_sym_head = SymVectorHead(
+            inp_channel=cfg.backbone_out_channels,
+            out_channel=cfg.sym_embed_size,
+            kernel_size=self.roi_output_size,
+        )
+        self.angle_sym_head = SymVectorHead(
+            inp_channel=cfg.backbone_out_channels,
+            out_channel=cfg.sym_embed_size,
+            kernel_size=self.roi_output_size,
+        )
+        self.bar_sym_head = SymVectorHead(
+            inp_channel=cfg.backbone_out_channels,
+            out_channel=cfg.sym_embed_size,
+            kernel_size=self.roi_output_size,
+        )
+        self.parallel_sym_head = SymVectorHead(
+            inp_channel=cfg.backbone_out_channels,
+            out_channel=cfg.sym_embed_size,
+            kernel_size=self.roi_output_size,
+        )
+        self.perpendicular_sym_head = SymVectorHead(
             inp_channel=cfg.backbone_out_channels,
             out_channel=cfg.sym_embed_size,
             kernel_size=self.roi_output_size,
@@ -111,7 +137,7 @@ class SymVectorBuild(nn.Module):
         for b_id, targets in enumerate(targets_det):
             labels_to_layer = all_labels_to_layer[b_id]
             
-            bboxes = targets.bbox                   # [#sym, 4]
+            bboxes = targets.bbox                                # [#sym, 4]
             labels = targets.get_field("labels")                 # [#sym]
             ids = targets.get_field("ids")                       # [#sym]
             text_contents = targets.get_field("text_contents")   # [#sym]
@@ -129,14 +155,14 @@ class SymVectorBuild(nn.Module):
                                    spatial_scale=1 / self.fpn_strides[layer_num]) 
 
                 label = labels[i]
-                if label == 1:
+                if label == 1:      # text_symbol
                     symbols_info["text_symbols"].append(feature)
                     symbols_info["text_symbols_str"].append(text_contents[i])
-                elif label == 2:
+                elif label == 2:    # perpendicular
                     symbols_info["perpendicular_symbols"].append(feature)
-                elif label == 3:
+                elif label == 3:    # head
                     symbols_info["head_symbols"].append(feature)
-                elif label in [5, 8, 11, 14, 16]:
+                elif label in [5, 8, 11, 14, 16]:   # angle
                     if label == 5:
                         symbols_info["angle_symbols"].append(feature)
                     elif label == 8:
@@ -147,7 +173,7 @@ class SymVectorBuild(nn.Module):
                         symbols_info["quad_angle_symbols"].append(feature)
                     elif label == 16:
                         symbols_info["penta_angle_symbols"].append(feature)
-                elif label in [6, 9, 12, 15]:
+                elif label in [6, 9, 12, 15]:   # bar
                     if label == 6:
                         symbols_info["bar_symbols"].append(feature)
                     elif label == 9:
@@ -156,20 +182,39 @@ class SymVectorBuild(nn.Module):
                         symbols_info["triple_bar_symbols"].append(feature)
                     elif label == 15:
                         symbols_info["quad_bar_symbols"].append(feature)
-                elif label in [7, 10, 13]:
+                elif label in [7, 10, 13]:  # parallel
                     if label == 7:
                         symbols_info["parallel_symbols"].append(feature)
                     elif label == 10:
                         symbols_info["double_parallel_symbols"].append(feature)
                     elif label == 13:
                         symbols_info["triple_parallel_symbols"].append(feature)
+                else:
+                    raise ValueError(f"Unknown symbol label: ({label})")
             
-            for key, value in symbols_info.items():
-                if key != "text_symbols_str" and len(value) != 0:
-                    # [[1, c, output_size, output_size], [1, c, output_size, output_size], ...] 
-                    # -> [N, c, output_size, output_size] -> [N, c_2]
-                    symbols_info[key] = self.sym_head(torch.cat(value, dim=0))
-            
+            for key, value in symbols_info.items():                
+                if len(value) != 0:
+                    if key == "text_symbols":
+                        # [[1, c, output_size, output_size], [1, c, output_size, output_size], ...] 
+                        # -> [N, c, output_size, output_size] -> [N, c_2]
+                        symbols_info[key] = self.text_sym_head(torch.cat(value, dim=0))
+                    elif key == "perpendicular_symbols":
+                        symbols_info[key] = self.perpendicular_sym_head(torch.cat(value, dim=0))
+                    elif key == "head_symbols":
+                        symbols_info[key] = self.head_sym_head(torch.cat(value, dim=0))
+                    elif key in ["angle_symbols", "double_angle_symbols", "triple_angle_symbols", "quad_angle_symbols", "penta_angle_symbols"]:
+                        symbols_info[key] = self.angle_sym_head(torch.cat(value, dim=0))
+                    elif key in ["bar_symbols", "double_bar_symbols", "triple_bar_symbols", "quad_bar_symbols"]:
+                        symbols_info[key] = self.bar_sym_head(torch.cat(value, dim=0))
+                    elif key in ["parallel_symbols", "double_parallel_symbols", "triple_parallel_symbols"]:
+                        symbols_info[key] = self.parallel_sym_head(torch.cat(value, dim=0))
+                    else:
+                        raise ValueError(f"Unknown key: ({key})")
+                else:
+                    # no need to assign empty [], because "symbols_info" is "defaultdict(list)",
+                    # so even key doesn't exist, it wil return [].
+                    pass
+                        
             all_symbols_info.append(symbols_info)
         
         return all_symbols_info
@@ -232,16 +277,29 @@ class SymVectorBuild(nn.Module):
                     elif label == 13:
                         symbols_info["triple_parallel_symbols"].append(feature)
 
-            for key in self.sym_lists:
-                value = symbols_info[key]
+            for key, value in symbols_info.items():                
                 if len(value) != 0:
-                    if key != "text_symbols_str":
+                    if key == "text_symbols":
                         # [[1, c, output_size, output_size], [1, c, output_size, output_size], ...] 
                         # -> [N, c, output_size, output_size] -> [N, c_2]
-                        symbols_info[key] = self.sym_head(torch.cat(value, dim=0))
+                        symbols_info[key] = self.text_sym_head(torch.cat(value, dim=0))
+                    elif key == "perpendicular_symbols":
+                        symbols_info[key] = self.perpendicular_sym_head(torch.cat(value, dim=0))
+                    elif key == "head_symbols":
+                        symbols_info[key] = self.head_sym_head(torch.cat(value, dim=0))
+                    elif key in ["angle_symbols", "double_angle_symbols", "triple_angle_symbols", "quad_angle_symbols", "penta_angle_symbols"]:
+                        symbols_info[key] = self.angle_sym_head(torch.cat(value, dim=0))
+                    elif key in ["bar_symbols", "double_bar_symbols", "triple_bar_symbols", "quad_bar_symbols"]:
+                        symbols_info[key] = self.bar_sym_head(torch.cat(value, dim=0))
+                    elif key in ["parallel_symbols", "double_parallel_symbols", "triple_parallel_symbols"]:
+                        symbols_info[key] = self.parallel_sym_head(torch.cat(value, dim=0))
+                    else:
+                        raise ValueError(f"Unknown key: ({key})")
                 else:
-                    symbols_info[key] = []
-            
+                    # no need to assign empty [], because "symbols_info" is "defaultdict(list)",
+                    # so even key doesn't exist, it wil return [].
+                    pass
+
             all_symbols_info.append(symbols_info)
         
         return all_symbols_info
