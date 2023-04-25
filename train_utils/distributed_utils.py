@@ -323,6 +323,9 @@ def init_distributed_mode(args):
 def build_optmizer(cfg, model):
     params = []
     for key, value in model.named_parameters():
+        if (cfg.separate) and (not key.startswith("rel_generator.")):
+            value.requires_grad = False
+            continue
         if not value.requires_grad:
             continue
         lr = cfg.lr
