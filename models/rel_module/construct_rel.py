@@ -531,7 +531,7 @@ class SymtoGeo(nn.Module):
             raise ValueError(f"Unknown rel type: ({rel})")    
         
         # [middle]
-        middle_qualified_mask = geo_geo_mask.sum(-1) > 1
+        middle_qualified_mask = (1. - (geo_geo_mask.sum(-1) > 1).float()) * -9999. + 1.
         
         return geo_geo_matrix, middle_qualified_mask.float()
 
