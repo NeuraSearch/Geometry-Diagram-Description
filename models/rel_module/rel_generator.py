@@ -64,8 +64,8 @@ class RelGenerator(nn.Module):
         
         # # # # # # # # # Build Geo Feature # # # # # # # # #
         
-        # all_geo_info: List[Dict]: Contain batch data geo information,
-        #   each dict contains geo information regarding to different classes, in Tensor([N, cfg.geo_embed_size])
+        # all_geo_info: List[Dict]: List contains batch data geo information,
+        #   each dict {"points", "lines", "circles"} contains geo information regarding to different classes, in Tensor([N, cfg.geo_embed_size])
         all_geo_info = self.build_geo(
             feature_map=geo_feature_map,
             gt_point_mask=gt_point_mask,
