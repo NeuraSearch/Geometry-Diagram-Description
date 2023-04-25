@@ -149,8 +149,20 @@ class SymtoGeo(nn.Module):
 
         self.weak_mask = weak_mask
         
-        self.middle_margin_layer = nn.Sequential(
-            nn.Linear(2*sym_embed_size, sym_rel_size),
+        self.LPL_layer = nn.Sequential(
+            nn.Linear(sym_embed_size, sym_rel_size),
+            nn.ReLU(),
+            nn.LayerNorm(sym_embed_size),
+        )
+        
+        self.PLP_layer = nn.Sequential(
+            nn.Linear(sym_embed_size, sym_rel_size),
+            nn.ReLU(),
+            nn.LayerNorm(sym_embed_size),
+        )
+        
+        self.PCP_layer = nn.Sequential(
+            nn.Linear(sym_embed_size, sym_rel_size),
             nn.ReLU(),
             nn.LayerNorm(sym_embed_size),
         )
@@ -159,45 +171,48 @@ class SymtoGeo(nn.Module):
             nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
             nn.LayerNorm(sym_embed_size),
+            nn.Linear(sym_rel_size, sym_rel_size),
+            nn.ReLU(),
+            nn.LayerNorm(sym_embed_size),
         )
         
         self.text_symbol_to_geo_layer = nn.Sequential(
-            nn.Linear(2 * sym_rel_size, sym_rel_size),
+            nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
             nn.LayerNorm(sym_rel_size),
             nn.Linear(sym_rel_size, 1),        
         )
         
         self.head_symbol_to_geo_layer = nn.Sequential(
-            nn.Linear(2 * sym_rel_size, sym_rel_size),
+            nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
             nn.LayerNorm(sym_rel_size),
             nn.Linear(sym_rel_size, 1),
         )
         
         self.angle_symbol_to_geo_layer = nn.Sequential(
-            nn.Linear(2 * sym_rel_size, sym_rel_size),
+            nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
             nn.LayerNorm(sym_rel_size),
             nn.Linear(sym_rel_size, 1),       
         )
     
         self.bar_symbol_to_geo_layer = nn.Sequential(
-            nn.Linear(2 * sym_rel_size, sym_rel_size),
+            nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
             nn.LayerNorm(sym_rel_size),
             nn.Linear(sym_rel_size, 1),
         )
     
         self.parallel_symbol_to_geo_layer = nn.Sequential(
-            nn.Linear(2 * sym_rel_size, sym_rel_size),
+            nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
             nn.LayerNorm(sym_rel_size),
             nn.Linear(sym_rel_size, 1),
         )
         
         self.perpendicular_symbol_to_geo_layer = nn.Sequential(
-            nn.Linear(2 * sym_rel_size, sym_rel_size),
+            nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
             nn.LayerNorm(sym_rel_size),
             nn.Linear(sym_rel_size, 1),
@@ -296,12 +311,14 @@ class SymtoGeo(nn.Module):
                 middle_geo=geo_info["points"],
                 margin_geo=geo_info["lines"],
                 geo_geo_rel=geo_rel["pl_rels"],
+                rel="lpl",
             )
             # [L, sym_rel_size]
             PLP_matrix, PLP_mask = self._combine_margin_middle_margin_matrix(
                 middle_geo=geo_info["lines"],
                 margin_geo=geo_info["points"],
                 geo_geo_rel=geo_rel["pl_rels"].T,
+                rel="plp",
             )
         else:
             LPL_matrix = LPL_mask = None
@@ -313,6 +330,7 @@ class SymtoGeo(nn.Module):
                 middle_geo=geo_info["circles"],
                 margin_geo=geo_info["points"],
                 geo_geo_rel=geo_rel["pc_rels"].T,
+                rel="pcp",
             )
         else:
             PCP_matrix = PCP_mask = None
@@ -423,39 +441,24 @@ class SymtoGeo(nn.Module):
             # [P+L+P+L+C+?]
             mask = torch.cat((mask, add_mask))
         
-        if geo_matrix == None:
-            return None
-        
         geo_matrix = self.geo_matrix_layer(geo_matrix)
         
         text_symbols_expand = symbols.unsqueeze(1).repeat(1, geo_matrix.size(0), 1)  # [N, P+L+P+L+C, h]
         geo_matrix_expand = geo_matrix.unsqueeze(0).repeat(symbols.size(0), 1, 1)    # [N, P+L+P+L+C, h]
         
         if symbol_type == "text":
-            # [N, P+L+P+L+C, 2h] -> [N, P+L+P+L+C, 1]
-            text_symbol_geo_rel = self.text_symbol_to_geo_layer(
-                torch.cat((text_symbols_expand, geo_matrix_expand), dim=-1)
-            )
+            # [N, P+L+P+L+C, h] -> [N, P+L+P+L+C, 1]
+            text_symbol_geo_rel = self.text_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "head":
-            text_symbol_geo_rel = self.head_symbol_to_geo_layer(
-                torch.cat((text_symbols_expand, geo_matrix_expand), dim=-1)
-            )
+            text_symbol_geo_rel = self.head_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "angle":
-            text_symbol_geo_rel = self.angle_symbol_to_geo_layer(
-                torch.cat((text_symbols_expand, geo_matrix_expand), dim=-1)
-            )
+            text_symbol_geo_rel = self.angle_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "bar":
-            text_symbol_geo_rel = self.bar_symbol_to_geo_layer(
-                torch.cat((text_symbols_expand, geo_matrix_expand), dim=-1)
-            )
+            text_symbol_geo_rel = self.bar_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "parallel":
-            text_symbol_geo_rel = self.parallel_symbol_to_geo_layer(
-                torch.cat((text_symbols_expand, geo_matrix_expand), dim=-1)
-            )
+            text_symbol_geo_rel = self.parallel_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "perpendicular":
-            text_symbol_geo_rel = self.perpendicular_symbol_to_geo_layer(
-                torch.cat((text_symbols_expand, geo_matrix_expand), dim=-1)
-            )
+            text_symbol_geo_rel = self.perpendicular_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         else:
             raise ValueError(f"Unknown symbol type: ({symbol_type})")
         
@@ -493,7 +496,7 @@ class SymtoGeo(nn.Module):
         
         return per_data_loss
     
-    def _combine_margin_middle_margin_matrix(self, middle_geo, margin_geo, geo_geo_rel):
+    def _combine_margin_middle_margin_matrix(self, middle_geo, margin_geo, geo_geo_rel, rel):
         """create matrix to represent relations for LPL, PLP, PCP
 
         Args:
@@ -518,11 +521,14 @@ class SymtoGeo(nn.Module):
         
         # !!! might cause inf in tensor if enable mix-precision, just set "amp" False will solve this        
         # [middle, margin] * [margin, h] -> [middle, h] concat [middle, h] -> [middle, 2h] -> [middle, h]
-        geo_geo_matrix = self.middle_margin_layer(
-            torch.cat(
-                (torch.matmul(geo_geo_mask, margin_geo), middle_geo), 
-                dim=-1)
-        )
+        if rel == "lpl":
+            geo_geo_matrix = self.LPL_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
+        elif rel == "plp":
+            geo_geo_matrix = self.PLP_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
+        elif rel == "pcp":
+            geo_geo_matrix = self.PCP_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
+        else:
+            raise ValueError(f"Unknown rel type: ({rel})")    
         
         # [middle]
         middle_qualified_mask = geo_geo_mask.sum(-1) > 1
