@@ -29,6 +29,9 @@ class Point:
     def can_perpendicular(self):
         return len(self.rel_endpoint_lines) > 1
 
+    def __eq__(self, other):
+        return self.ids == other.ids
+
 class Line:
     def __init__(self, ids):
         self.ids = ids

@@ -170,26 +170,23 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
         elif func["LPL"](max_ids):
             which_point_ids = max_ids - geo_start_ids["LPL"]
             ocr_str = ocr[i]
-            x, y = resolve_LPL(points, which_point_ids, ocr_str)
-            if x != None:
-                parse_res["angle"].append(x)
-            points = y
+            res = resolve_LPL(points, which_point_ids, ocr_str)
+            if res != None:
+                parse_res["angle"].append(res)    # (Point, angle_degree_in_int)
         
         elif func["PLP"](max_ids):
             which_line_ids = max_ids - geo_start_ids["PLP"]
             ocr_str = ocr[i]
-            x, y = resolve_PLP(lines, which_line_ids, ocr_str)
-            if x != None:
-                parse_res["length"].append(x)
-            lines = y
+            res = resolve_PLP(lines, which_line_ids, ocr_str)
+            if res != None:
+                parse_res["length"].append(res)
         
         elif func["PCP"](max_ids):
             which_circle_ids = max_ids - geo_start_ids["PCP"]
             ocr_str = ocr[i]
-            x, y = resolve_PCP(circles, which_circle_ids, ocr_str)
-            if x != None:
-                parse_res["angle"].append(x)
-            circles = y
+            res = resolve_PCP(circles, which_circle_ids, ocr_str)
+            if res != None:
+                parse_res["angle"].append(res)
                 
         elif func["head"](max_ids):
             which_head_ids = max_ids - geo_start_ids["head"]
@@ -206,22 +203,19 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                 # we use func["points"], func["lines"], func["circles"] to determine which geo this head points to
             elif func["points"](this_head_point_max_ids - len(points)):
                 which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["points"]
-                x, y = resolve_LPL(points, which_ids_head_point, ocr[i])
-                if x != None:
-                    parse_res["angle"].append(x)
-                points = y
+                res = resolve_LPL(points, which_ids_head_point, ocr[i])
+                if res != None:
+                    parse_res["angle"].append(res)
             elif func["lines"](this_head_point_max_ids - len(points)):
                 which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["lines"]
-                x, y = resolve_PLP(lines, which_ids_head_point, ocr[i])
-                if x != None:
-                    parse_res["lines"].append(x)
-                lines = y
-            elif func["circles"](this_head_point_max_ids- len(points)):
+                res = resolve_PLP(lines, which_ids_head_point, ocr[i])
+                if res != None:
+                    parse_res["lines"].append(res)
+            elif func["circles"](this_head_point_max_ids - len(points)):
                 which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["circles"]
-                x, y = resolve_PCP(circles, which_ids_head_point, ocr[i])
-                if x != None:
-                    parse_res["angles"].append(x)
-                circles = y
+                res = resolve_PCP(circles, which_ids_head_point, ocr[i])
+                if res != None:
+                    parse_res["angles"].append(res)
         
     return parse_res
 
@@ -252,118 +246,35 @@ def build_ids_assignment(points, lines, circles, sym_head):
     return func, geo_start_ids
 
 def resolve_LPL(points, which_point_ids, ocr_str):
-    
-    p = points[which_point_ids]
 
-    if len(re.findall(r"[A-Z]", ocr_str)) == 1:
+    if len(re.findall(r"[A-Z]", ocr_str)) == 1:     # name
         points[which_point_ids].angle_name = ocr_str
-    elif len(re.findall(r"\d", ocr_str)) > 0:
+    elif len(re.findall(r"\d", ocr_str)) > 0:       # degree
         try:
             angle_num = int(re.sub(" ", "", ocr_str))
-            if p.angle_name != None:
-                return (points[which_point_ids], angle_num), points
-            else:
-                if p.ref_name:
-                    if len(p.rel_endpoint_lines) > 2:
-                        temp = []
-                        for l in p.rel_endpoint_lines:
-                            for l_p in l.rel_endpoint_points:
-                                if l_p != p and l_p.ref_name:
-                                    temp.append(l_p)
-                                if len(temp) == 2:
-                                    break
-                            if len(temp) == 2:
-                                break
-                            
-                            for l_p in l.rel_online_points:
-                                if l_p != p and l_p.ref_name:
-                                    if l_p not in temp and len(temp) < 2:
-                                        temp.append(l_p)
-                                if len(temp) == 2:
-                                    break
-                            if len(temp) == 2:
-                                break
-                        
-                        for l in p.rel_online_lines:
-                            for l_p in l.rel_endpoint_points:
-                                if l_p != p and l_p.ref_name and len(temp) < 2:
-                                    temp.append(l_p)
-                                if len(temp) == 2:
-                                    break
-                            if len(temp) == 2:
-                                break
-                            
-                            for l_p in l.rel_online_points:
-                                if l_p != p and l_p.ref_name and len(temp) < 2:
-                                    if l_p not in temp:
-                                        temp.append(l_p)
-                                if len(temp) == 2:
-                                    break
-                            if len(temp) == 2:
-                                break
-                        
-                        if len(temp) == 2:
-                            points[which_point_ids].angle_name = f"{temp[0].ref_name}{p.ref_name}{temp[1].ref_name}"
-                            return ([points[which_point_ids], angle_num]), points
+            return ([points[which_point_ids], angle_num])
         except ValueError as e:
             pass
-    
-    return None, points
+        
+    return None
 
 def resolve_PLP(lines, which_line_ids, ocr_str):
 
-    l = lines[which_line_ids]
-    
     if len(ocr_str) > 0:
-        if l.ref_name:
-            return (lines[which_line_ids], ocr_str), lines
-        else:
-            if len(l.rel_endpoint_points) > 1:
-                temp = []
-                for p in l.rel_endpoint_points:
-                    if p.ref_name:
-                        temp.append(p)
-                    if len(temp) == 2:
-                        break
-                
-                for p in l.rel_online_points:
-                    if p.ref_name and len(temp) < 2:
-                        temp.append(p)
-                    if len(temp) == 2:
-                        break
-                
-                if len(temp) == 2:
-                    lines[which_line_ids].ref_name = f"{temp[0].ref_name}{temp[1].ref_name}"
-                    return (lines[which_line_ids], ocr_str), lines
+        return (lines[which_line_ids], ocr_str)
     
-    return None, lines
+    return None
 
 def resolve_PCP(circles, which_circle_ids, ocr_str):
-    
-    c = circles[which_circle_ids]
     
     if len(re.findall(r"\d", ocr_str)) > 0:
         try:
             angle_num = int(re.sub(" ", "", ocr_str))
-            if len(c.rel_center_points) > 0 and len(c.rel_on_circle_points) > 1:
-                mid_point = None
-                for c_p in c.rel_center_points:
-                    if c_p.ref_name:
-                        mid = c_p
-                        break
-                if mid_point:
-                    temp = []
-                    for c_p in c.rel_on_circle_points:
-                        if c_p.ref_name:
-                            temp.append(c_p)
-                        if len(temp) == 2:
-                            break
-                    if len(temp) == 2:
-                        return (f"{temp[0].ref_name}{mid_point.ref_name}{temp[1].ref_name}", angle_num), circles
+            return (circles[which_circle_ids], angle_num)
         except ValueError as e:
             pass
     
-    return None, circles
+    return None
 
 def extract_congruent_geo(symbol_geo_rel, geo):
     

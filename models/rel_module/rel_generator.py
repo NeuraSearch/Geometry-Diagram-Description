@@ -116,7 +116,7 @@ class RelGenerator(nn.Module):
                 sym_geo_rels=sym_geo_rels_predictions, 
                 ocr_results=[data["text_symbols_str"] for data in all_sym_info],
                 threshold=self.cfg.threshold,
-            )            
+            )
             
             # List[Dict]:  {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
             # !!! From here, if the rel doesn't exist, there will be no such key.
