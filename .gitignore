@@ -134,3 +134,4 @@ data/
 .nfs*
 checkpoints/
 wandb/
+submit.sh
