@@ -302,6 +302,11 @@ def init_distributed_mode(args):
         args.word_size = int(os.environ("WORLD_SIZE"))
         args.gpu = int(os.environ("LOCAL_RANK"))
     elif 'SLURM_PROCID' in os.environ:
+        # !!!: this is because the server (governed by SLURM) only supports one GPU,
+        print('Not using distributed mode')
+        args.distributed = False
+        args.rank = -1  # use one GPU, we set rank==-1
+        return
         args.rank = int(os.environ['SLURM_PROCID'])
         args.gpu = args.rank % torch.cuda.device_count()
     else:
