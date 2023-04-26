@@ -118,8 +118,8 @@ def reduce_dict(input_dict, average=True):
         if average:
             values /= world_size
         
-        reduced_dict = {k: v for k, v in zip(keys, values)}
-        return reduce_dict
+        reduced_output = {k: v for k, v in zip(keys, values)}
+        return reduced_output
 
 def reduce_dict_nonelegant(input_dict, average=True):
     world_size = dist.get_world_size()
@@ -209,7 +209,7 @@ class MetricLogger(object):
                 eta_second = iter_time.global_avg * (len(iterable) - i)
                 eta_string = str(datetime.timedelta(seconds=eta_second))
                 if torch.cuda.is_available():
-                    if self.logger == None:
+                    if self.logger == None:     # only on non-main rank, self.logger == None. However, we also disable print() on non-main rank, actually, this will not print on non-main rank.
                         print(log_msg.format(i, len(iterable),
                                             eta=eta_string,
                                             meters=str(self),
@@ -298,9 +298,9 @@ def init_distributed_mode(args):
     # local_rank  | 0  |   1  |  0   |   1 |
     # rank        | 0  |   1  |  2   |   4 |
     if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
-        args.rank = int(os.environ("RANK"))
-        args.word_size = int(os.environ("WORLD_SIZE"))
-        args.gpu = int(os.environ("LOCAL_RANK"))
+        args.rank = int(os.environ["RANK"])
+        args.world_size = int(os.environ["WORLD_SIZE"])
+        args.gpu = int(os.environ["LOCAL_RANK"])
     elif 'SLURM_PROCID' in os.environ:
         # !!!: this is because the server (governed by SLURM) only supports one GPU,
         print('Not using distributed mode')
@@ -314,15 +314,16 @@ def init_distributed_mode(args):
         args.distributed = False
         args.rank = -1  # use one GPU, we set rank==-1
         return
-        
+
     args.distributed = True
     torch.cuda.set_device(args.gpu)
-    args.dist_backend = "nccl"
-    print('| distributed init (rank {}): {}'.format(
-        args.rank, args.dist_url), flush=True)
+    args.dist_backend = "gloo"  # "nccl" will hang, so we shift to "gloo"
+    print('| distributed init (rank {}): {} | world size: ({})'.format(
+        args.rank, args.dist_url, args.world_size), flush=True)
     torch.distributed.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                         world_size=args.world_size, rank=args.rank)
-    torch.distributed.barrier(device_ids=[args.rank])
+    # torch.distributed.barrier(device_ids=[args.rank])
+    torch.distributed.barrier()
     setup_for_distributed(args.rank==0)
 
 def build_optmizer(cfg, model):
