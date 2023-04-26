@@ -53,6 +53,9 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
         #   MAX_ITER: 7500
         #   STEPS: [0, 3750, 5000]
     
+    cfg.train_img_per_batch = images_per_gpu
+    cfg.test_img_per_batch = images_per_gpu
+    
     normalize_transform = T.Normalize(
         mean=[200.0, 200.0, 200.0],
         std=[1., 1., 1.],
