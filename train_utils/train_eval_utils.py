@@ -142,6 +142,9 @@ def evaluate(model, data_loader, device, logger=None):
         predictions.update(gathered_natural_language_results)
         """ *** *** *** *** *** *** """
         
+        # !!!: we uncomment the below line, so better wait here.
+        if device != torch.device("cpu"):
+            torch.cuda.synchronize(device)
         # outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
         # NOTE: we don't need to call "torch.cuda.synchronize(device)" again,
         #   because the above line needs to wait until it obtains "outputs" from the model
