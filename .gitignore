@@ -135,3 +135,4 @@ data/
 checkpoints/
 wandb/
 submit.sh
+slurm-*.out
