@@ -12,6 +12,7 @@ import codecs
 import torch
 import wandb
 import datetime
+import numpy as np
 
 from models import DiagramDescribe
 from train_args import add_train_args
@@ -23,9 +24,19 @@ from train_utils import init_distributed_mode, create_aspect_ratio_groups, \
                         load_from_url
 from data_loader import make_data_loader, geo_data_collate_fn
 
+class ToyModel(torch.nn.Module):
+    def __init__(self):
+        super(ToyModel, self).__init__()
+        
+        self.linear = torch.nn.Linear(10, 20)
+    
+    def forward(self, x):
+        return self.linear(x)
+
 def main(args):
     # setup multiple GPUs training
     init_distributed_mode(args)
+    print("Finish initializing distribution mode.")
     
     # set random seed
     set_environment(args.seed)
@@ -63,8 +74,9 @@ def main(args):
 
     # create dataset
     print("Loading data")
+    # we might update args.train_img_per_batch, args.test_img_per_batch
     train_dataset, eval_dataset, test_dataset = make_data_loader(args, is_train=args.is_train)
-
+    
     # create sampler
     print("Creating data loaders")
     if args.distributed:
@@ -110,17 +122,22 @@ def main(args):
     # create model
     print("creating model")
     model = DiagramDescribe(args)
+    # model = ToyModel()
     model.to(device)
+    print("finsih creating model")
 
     # multiple GPU mode, we need to convert the bn to sync_BN
     if args.distributed and args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
     
+    print("detect whether wrap model to DDP")
     # make model ddp
     model_without_ddp = model
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
+        # after DDP wrap, the model is "model.module", so better use "model_without_ddp" to avoid "module" prefix.
         model_without_ddp = model.module
+    print("finish detection for whether wrap model to DDP")
     
     if is_main_process() and run != None:
         run.watch(model)
@@ -237,4 +254,6 @@ if __name__ == "__main__":
     args.test_only = args.is_train == False
     print(args.test_only)
     
+    # port_id = 10000 + np.random.randint(0, 1000)
+    # args.dist_url = 'tcp://127.0.0.1:29500'
     main(args)
