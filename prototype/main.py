@@ -160,11 +160,13 @@ def main(args):
         print(f"Restore model from {os.path.join(str(MAIN_PATH / args.save_dir), args.resume)}")
         checkpoint = torch.load(os.path.join(str(MAIN_PATH / args.save_dir), args.resume), map_location="cpu")
         model_without_ddp.load_state_dict(checkpoint["model"])
-        optimizer.load_state_dict(checkpoint["optimizer"])
-        lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
-        args.start_epoch = checkpoint["epoch"] + 1
-        if args.amp and "scaler" in checkpoint:
-            scaler.load_state_dict(checkpoint["scaler"])
+        # if we freeze the seg_det module, we train the rel module. Actually, we start a new train procedure.
+        if not args.only_train_rel: 
+            optimizer.load_state_dict(checkpoint["optimizer"])
+            lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+            args.start_epoch = checkpoint["epoch"] + 1
+            if args.amp and "scaler" in checkpoint:
+                scaler.load_state_dict(checkpoint["scaler"])
 
     if not args.is_train:
         predictions = evaluate(model, data_loader_test, device=device, logger=logger)

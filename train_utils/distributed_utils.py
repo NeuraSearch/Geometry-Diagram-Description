@@ -329,7 +329,8 @@ def init_distributed_mode(args):
 def build_optmizer(cfg, model):
     params = []
     for key, value in model.named_parameters():
-        if (cfg.only_train_rel) and (not key.startswith("rel_generator.")):
+        prefix = "rel_generator." if get_world_size() == 1 else "module.rel_generator."
+        if (cfg.only_train_rel) and (not key.startswith(prefix)):
             value.requires_grad = False
             continue
         if not value.requires_grad:
@@ -345,7 +346,7 @@ def build_optmizer(cfg, model):
         optimizer = torch.optim.SGD(params, lr=cfg.lr, momentum=cfg.momentum, weight_decay=cfg.weight_decay)
     elif cfg.optimization_method == "adam":
         optimizer = torch.optim.Adam(params, lr=cfg.lr, betas=(0.9, 0.999), weight_decay=cfg.weight_decay)
-    
+
     return optimizer
 
 def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):

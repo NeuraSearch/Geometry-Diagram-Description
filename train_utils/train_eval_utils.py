@@ -150,7 +150,7 @@ def evaluate(model, data_loader, device, logger=None):
         outputs = model(images=images, images_not_tensor=images_not_tensor)
                 
         """ *** Customized Part *** """
-        parse_results, natural_language_results = outputs
+        natural_language_results = outputs
         natural_language_results_with_id = {img_id: natural_language_results[idx] for idx, img_id in enumerate(batch_data["images_id"])}
         gathered_natural_language_results = all_gather(natural_language_results_with_id)
         
