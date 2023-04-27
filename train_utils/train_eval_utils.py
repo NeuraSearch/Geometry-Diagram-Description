@@ -138,8 +138,14 @@ def evaluate(model, data_loader, device, logger=None):
         """ *** Customized Part *** """
         parse_results, natural_language_results = outputs
         natural_language_results_with_id = {img_id: natural_language_results[idx] for idx, img_id in enumerate(batch_data["images_id"])}
-        gathered_natural_language_results = all_gather(natural_language_results_with_id)[0]
-        predictions.update(gathered_natural_language_results)
+        gathered_natural_language_results = all_gather(natural_language_results_with_id)
+        
+        temp = {}
+        for one_gpu_pred in gathered_natural_language_results:
+            for key, val in one_gpu_pred.items():
+                assert key not in temp, f"duplicate key: ({key})"
+                temp[key] = val
+        predictions.update(temp)
         """ *** *** *** *** *** *** """
         
         # !!!: we uncomment the below line, so better wait here.
