@@ -156,7 +156,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
     parse_res = defaultdict(list)
     
     if text_sym_geo_rel == None:
-        return parse_res
+        return parse_res, points, lines, circles
     
     """ construct function for determine ids to correct geo. """
     func, geo_start_ids = build_ids_assignment(points, lines, circles, sym_head)
