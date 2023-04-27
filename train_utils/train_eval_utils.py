@@ -122,6 +122,20 @@ def evaluate(model, data_loader, device, logger=None):
         # "targets_geo": targets_geo,
         # "targets_sym":targets_sym,
         
+        # TODO: [TEST] remove
+        # input("press...")
+        # for target in batch_data["targets_seg"]:
+        #     print("TAR_SEG: ", target.get_field("labels"))
+        #     print()
+        
+        # print("*"*100)
+
+        # for target in batch_data["targets_det"]:
+        #     print("TAR_DET: ", target.get_field("labels"))
+        #     print()
+        
+        # print("-"*100)
+        
         images = batch_data["images"]
         images_not_tensor = batch_data["images_not_tensor"]
         

@@ -123,7 +123,7 @@ class FCOSPostProcessor(nn.Module):
             boxlist = boxlist.clip_to_image(remove_empty=False)     # 根据image的大小要把过大的box crop
             boxlist = remove_small_boxes(boxlist, self.min_size)
             results.append(boxlist)
-
+                
         return results
 
     def forward(self, locations, box_cls, box_regression, centerness, image_sizes):
@@ -179,6 +179,12 @@ class FCOSPostProcessor(nn.Module):
         # but after NMS, the number of box for each data is lower
         nms_thresh=0.9
         boxlists = [boxlist_nms(boxlist, nms_thresh) for boxlist in boxlists]
+
+        # TODO: [TEST] remove
+        # for box in boxlists:
+        #     print("det label: ", box.get_field("labels"))
+        #     print()
+        # print("*"*100)
         
         for index in range(len(boxlists)):  # index: each data
             ids = []
@@ -298,6 +304,8 @@ class GEOPostProcessor(nn.Module):
         label_img = measure.label(bin_seg[:,:,0], connectivity = 2)
         avg_area_point = (label_img>0).sum()/label_img.max()
         # np.unique(label_img)相互连通的点会用一个数字表示
+        # TODO: [TEST] remove
+        # print("np.unique(label_img): ", np.unique(label_img))
         for idx in np.unique(label_img):
             if idx!=0:
                 # (label_img==idx)取出这个点的mask
@@ -307,6 +315,9 @@ class GEOPostProcessor(nn.Module):
                 if mask.sum() > avg_area_point*self.min_area_ratio[0]:
                     masks.append(mask)
                     classes.append(1)
+        
+        # TODO: [TEST] remove
+        # print("classes point: ", classes)
         
         # get line and circle instance
         # [H, W]
@@ -360,6 +371,11 @@ class GEOPostProcessor(nn.Module):
                     classes.append(3)
                     # self.seperate_ins(mask, 3, masks, classes, avg_area_lc)
         
+        # TODO: [TEST] remove
+        # print("classes point, line, circle: ", classes)
+        # print()
+        # print()
+        # print()
         # masks: [H, W], ...
         # classes: {1,2,3}, ...
         return self.construct_GeoList(masks, classes, img_size)

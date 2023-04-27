@@ -2,7 +2,7 @@ main_args:
   is_train: True
   project_name: "v0.9_det_seg_test"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
-  resume: null
+  resume: "2023_04_26-15_10_21/best.pth"
   save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
   eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
@@ -11,17 +11,17 @@ main_args:
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/PGDP5K/test"
   aspect_ratio_group_factor: 3
-  train_img_per_batch: 20
-  test_img_per_batch: 20
-  workers: 8
+  train_img_per_batch: 4
+  test_img_per_batch: 4
+  workers: 1
   dist_url: "env://"
   sync_bn: True
   amp: False
   print_freq: 1
   seed: 42
   device: "cuda"
-  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  # wandb_key: null
+  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  wandb_key: null
   epochs: 50
   warmpup: False
   toy_data: False
