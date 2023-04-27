@@ -136,3 +136,4 @@ checkpoints/
 wandb/
 submit.sh
 slurm-*.out
+backup/
