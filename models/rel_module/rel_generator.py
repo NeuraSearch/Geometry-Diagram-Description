@@ -109,19 +109,15 @@ class RelGenerator(nn.Module):
             return losses
         else:
             
-            # parse_results (List(Dict)): each dict contains the parsed relations:
-            #   keys: {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
-            parse_results = parse_rel(
+            # text_symbols_parse_results: List[ Dict{} ], each Dict: {"angle": [point, point, ...] or [], "line": [line, line, ...] or []}
+            # other_symbols_parse_results: List[ Dict{}], each Dict: {"parallel": [line, line, ...]}
+            text_symbols_parse_results, other_symbols_parse_results = parse_rel(
                 geo_rels=geo_rels_predictions, 
                 sym_geo_rels=sym_geo_rels_predictions, 
                 ocr_results=[data["text_symbols_str"] for data in all_sym_info],
                 threshold=self.cfg.threshold,
             )
-            
-            # List[Dict]:  {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
-            # !!! From here, if the rel doesn't exist, there will be no such key.
-            natural_language_results = []    
-            for per_parse_res in parse_results:
-                natural_language_results.append(convert_parse_to_natural_language(per_parse_res))
-            
-            return parse_results, natural_language_results
+                        
+            natural_language_results = convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_parse_results)
+
+            return natural_language_results

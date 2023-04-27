@@ -88,7 +88,7 @@ class DiagramDescribe(nn.Module):
                 # {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}.
                 # # List[Dict]:  each Dict is a data prediction, containing keys: 
                 # {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
-                parse_results, natural_language_results = self.rel_generator(
+                natural_language_results = self.rel_generator(
                     geo_feature_map=rel_metatdata["geo_feature_map"],
                     sym_feature_maps=rel_metatdata["sym_feature_maps"],
                     proposals_seg=rel_metatdata["proposals_seg"],
@@ -98,6 +98,6 @@ class DiagramDescribe(nn.Module):
             
             else:
                 dummy_results = [{"A": 1} for _ in range(self.cfg.test_img_per_batch)]
-                return dummy_results, dummy_results
+                return dummy_results
             
-            return parse_results, natural_language_results
+            return natural_language_results

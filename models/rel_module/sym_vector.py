@@ -95,6 +95,7 @@ class SymVectorBuild(nn.Module):
         )
         
         self.easyocr = easyocr.Reader(["en"], gpu=torch.cuda.is_available())
+        # self.easyocr = easyocr.Reader(["en"], gpu=next(self.parameters()).device)
         
     def forward(self, 
                 feature_maps,
@@ -189,6 +190,8 @@ class SymVectorBuild(nn.Module):
                         symbols_info["double_parallel_symbols"].append(feature)
                     elif label == 13:
                         symbols_info["triple_parallel_symbols"].append(feature)
+                elif label in [4, 17]:
+                    pass
                 else:
                     raise ValueError(f"Unknown symbol label: ({label})")
             
@@ -208,6 +211,8 @@ class SymVectorBuild(nn.Module):
                         symbols_info[key] = self.bar_sym_head(torch.cat(value, dim=0))
                     elif key in ["parallel_symbols", "double_parallel_symbols", "triple_parallel_symbols"]:
                         symbols_info[key] = self.parallel_sym_head(torch.cat(value, dim=0))
+                    elif key == "text_symbols_str":
+                        pass
                     else:
                         raise ValueError(f"Unknown key: ({key})")
                 else:
@@ -293,6 +298,8 @@ class SymVectorBuild(nn.Module):
                         symbols_info[key] = self.bar_sym_head(torch.cat(value, dim=0))
                     elif key in ["parallel_symbols", "double_parallel_symbols", "triple_parallel_symbols"]:
                         symbols_info[key] = self.parallel_sym_head(torch.cat(value, dim=0))
+                    elif key == "text_symbols_str":
+                        pass
                     else:
                         raise ValueError(f"Unknown key: ({key})")
                 else:

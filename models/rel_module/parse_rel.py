@@ -34,7 +34,8 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
             keys: {"angle", "length", "congruent_angle", "congruent_bar", "parallel", "perpendicular"}
     """
     
-    parse_results = []
+    text_symbols_parse_results = []     # [Dict("angle": [] or [Point], "line": [] or [Point]), ...]
+    other_symbols_parse_results = []    # [Dict("parallel": [lines, ...]), ...]
     # parse each data
     for per_geo_rel, per_sym_geo_rel, per_ocr_res in zip(geo_rels, sym_geo_rels, ocr_results):
         
@@ -46,36 +47,45 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
             continue
         
         """ 2. parse text_symbols and geos. """
-        # {"angle", "length"}
-        text_symbols_geos_rel = parse_text_symbol_rel_per_data(
+        # {"angle": [point] or [] , "length": [line] or []}
+        text_symbols_geos_rel, points, lines, circles = parse_text_symbol_rel_per_data(
             per_sym_geo_rel["text_symbol_geo_rel"], 
             per_ocr_res, 
             points, lines, circles, 
             per_sym_geo_rel["head_symbol_geo_rel"]
         )
+        text_symbols_parse_results.append(text_symbols_geos_rel)
         
         """ 3. parse congruent. """
         # {"[]angle_symbols", "bar_symbols", "parallel_symbols", "perpendicular"}
-        other_symbols_geos_rel = defaultdict(list)
+        other_symbols_geos_rel = {}
         for sym, sym_rel in per_sym_geo_rel.items():
             
             if sym_rel != None:
                 
                 if "angle" in sym:
-                    other_symbols_geos_rel[sym].append(extract_congruent_geo(sym_rel, points))
+                    assert sym not in other_symbols_geos_rel
+                    res = extract_congruent_geo(sym_rel, points)
+                    if res != None:
+                        other_symbols_geos_rel[sym] = res
                 elif "bar" in sym:
-                    other_symbols_geos_rel[sym].append(extract_congruent_geo(sym_rel, lines))
+                    assert sym not in other_symbols_geos_rel
+                    res = extract_congruent_geo(sym_rel, lines)
+                    if res != None:
+                        other_symbols_geos_rel[sym] = res
                 elif "parallel" in sym:
-                    other_symbols_geos_rel[sym].append(extract_congruent_geo(sym_rel, lines))
+                    assert sym not in other_symbols_geos_rel
+                    res = extract_congruent_geo(sym_rel, lines)
+                    if res != None:
+                        other_symbols_geos_rel[sym] = res
                 elif "perpendicular" in sym:
-                    other_symbols_geos_rel["perpendicular"].append(extract_perperdicular_geo(sym_rel, points))
-
-        per_results = {}
-        per_results.update(text_symbols_geos_rel)
-        per_results.update(other_symbols_geos_rel)
-        parse_results.append(per_results)
+                    res = extract_perperdicular_geo(sym_rel, points)
+                    if len(res) != 0:
+                        other_symbols_geos_rel["perpendicular"] = res
+                        
+        other_symbols_parse_results.append(other_symbols_geos_rel)
     
-    return parse_results
+    return text_symbols_parse_results, other_symbols_parse_results
       
 def parse_geo_rel_per_data(geo_rel):
     """
@@ -210,14 +220,14 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                 which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["lines"]
                 res = resolve_PLP(lines, which_ids_head_point, ocr[i])
                 if res != None:
-                    parse_res["lines"].append(res)
+                    parse_res["length"].append(res)
             elif func["circles"](this_head_point_max_ids - len(points)):
                 which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["circles"]
                 res = resolve_PCP(circles, which_ids_head_point, ocr[i])
                 if res != None:
                     parse_res["angles"].append(res)
         
-    return parse_res
+    return parse_res, points, lines, circles
 
 def build_ids_assignment(points, lines, circles, sym_head):
 
@@ -283,10 +293,10 @@ def extract_congruent_geo(symbol_geo_rel, geo):
     idx_cache = []
     results = []
     for i in range(total_angles):
-        select_geo_idx = torch.argmax(symbol_geo_rel[i]).item()
+        select_geo_idx = torch.argmax(symbol_geo_rel[i]).item() # each angle <-> a geo
         if select_geo_idx not in idx_cache:
             idx_cache.append(select_geo_idx)
-            results.append(select_geo_idx)
+            results.append(geo[select_geo_idx])
         else:
             continue
     
@@ -306,4 +316,3 @@ def extract_perperdicular_geo(perpendicular_geo_rel, geo):
             points.append(geo[select_point_idx])    
     
     return points
-    
