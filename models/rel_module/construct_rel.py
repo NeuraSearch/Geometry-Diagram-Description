@@ -81,7 +81,6 @@ class GeotoGeo(nn.Module):
             pl_rel_logits_per_data, pc_rel_logits_per_data = self.construct_geo_to_geo_per_data(geo_info)
             
             if pl_rel_logits_per_data != None:
-                pl_rel_logits_per_data = F.softmax(pl_rel_logits_per_data, dim=-1)
                 # print("Here: ", pl_rel_logits_per_data)
                 pl_rel_per_data = torch.argmax(pl_rel_logits_per_data, dim=-1)      # [p, l]
                 pl_rels.append(pl_rel_per_data)
@@ -122,6 +121,9 @@ class GeotoGeo(nn.Module):
             lines_expand = torch.unsqueeze(lines, 0)            # [1, l, h]
             points_lines = points_expand + lines_expand                  # [p, l, 2h]
             points_lines_rel = self.combine_point_line_layer(points_lines) # [p, l, 3]
+            
+            
+            
         point_circles_rel = None
         if len(points) != 0 and len(circles) != 0:
             # combine point and circle
@@ -474,7 +476,7 @@ class SymtoGeo(nn.Module):
         # [P+L+P+L+C+?] -> [1, P+L+P+L+C+?] -> [N, P+L+P+L+C+?] -> [N, P+L+P+L+C+?, 1]
         mask_expand = mask.unsqueeze(0).repeat(text_symbol_geo_rel.size(0), 1).unsqueeze(-1)
         
-        text_symbol_geo_rel *= mask_expand
+        text_symbol_geo_rel = text_symbol_geo_rel.masked_fill(mask_expand == 0, -1e7)
         
         return text_symbol_geo_rel
 
@@ -532,18 +534,23 @@ class SymtoGeo(nn.Module):
         # [middle, margin] * [margin, h] -> [middle, h] concat [middle, h] -> [middle, 2h] -> [middle, h]
         if rel == "lpl":
             # geo_geo_matrix = self.LPL_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
-            geo_geo_matrix = middle_geo
+            geo_geo_matrix = self.LPL_layer(middle_geo)
+            # geo_geo_matrix = middle_geo
         elif rel == "plp":
             # geo_geo_matrix = self.PLP_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
-            geo_geo_matrix = middle_geo
+            geo_geo_matrix = self.PLP_layer(middle_geo)
+            # geo_geo_matrix = middle_geo
         elif rel == "pcp":
             # geo_geo_matrix = self.PCP_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
-            geo_geo_matrix = middle_geo
+            geo_geo_matrix = self.PCP_layer(middle_geo)
+            # geo_geo_matrix = middle_geo
         else:
             raise ValueError(f"Unknown rel type: ({rel})")    
         
         # [middle]
-        middle_qualified_mask = (1. - (geo_geo_mask.sum(-1) > 1).float()) * -9999. + 1.
+        middle_qualified_mask = (geo_geo_mask.sum(-1) > 1).float()
+        
+        print("middle_qualified_mask: ", middle_qualified_mask)
         
         return geo_geo_matrix, middle_qualified_mask.float()
 
