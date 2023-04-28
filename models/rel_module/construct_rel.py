@@ -385,6 +385,7 @@ class SymtoGeo(nn.Module):
                 mask=mask,
                 symbol_type="head",
             )
+            
         sym_to_geo_rel_dict["head_symbol_geo_rel"] = head_symbol_geo_rel  
         
         """ *********************** End *********************** """
@@ -494,6 +495,28 @@ class SymtoGeo(nn.Module):
             try:
                 if pred_logits != None:
                     target_ids = target[sym_geo_key]
+                    
+                    # print(sym_geo_key)
+                    # for i in range(pred_logits.size(0)):
+                    #     if sym_geo_key in mask_cache:
+                    #         print("mask_cache: ", mask_cache[sym_geo_key])
+                    #     else:
+                    #         if "angle" in sym_geo_key:
+                    #             print("mask_cache: ", mask_cache["angle_geo_rel"])
+                    #         if "bar" in sym_geo_key:
+                    #             print("mask_cache: ", mask_cache["bar_geo_rel"])
+                    #         if "parallel" in sym_geo_key:
+                    #             print("mask_cache: ", mask_cache["parallel_geo_rel"])
+                    #         if "perpendicular" in sym_geo_key:
+                    #             print("mask_cache: ", mask_cache["perpendicular_geo_rel"])   
+                    #     print("pred_logits: ", pred_logits[i, :])
+                    #     print(target_ids[i, :])
+                    #     print(self.bce_with_logits_loss(input=pred_logits[i, :].squeeze(-1), target=target_ids[i, :].to(torch.float)))
+                    #     print()
+                    #     print()
+                    #     print()
+                    #     input()
+                
                     per_data_loss[sym_geo_key] = self.bce_with_logits_loss(input=pred_logits.squeeze(-1), target=target_ids.to(torch.float))
                 
                 else:
@@ -549,9 +572,7 @@ class SymtoGeo(nn.Module):
         
         # [middle]
         middle_qualified_mask = (geo_geo_mask.sum(-1) > 1).float()
-        
-        print("middle_qualified_mask: ", middle_qualified_mask)
-        
+                
         return geo_geo_matrix, middle_qualified_mask.float()
 
     @staticmethod
