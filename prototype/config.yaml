@@ -11,8 +11,8 @@ main_args:
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/PGDP5K/test"
   aspect_ratio_group_factor: 3
-  train_img_per_batch: 16
-  test_img_per_batch: 16
+  train_img_per_batch: 4
+  test_img_per_batch: 4
   workers: 1
   dist_url: "env://"
   sync_bn: True
@@ -20,11 +20,11 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  # wandb_key: null
-  epochs: 50
+  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  wandb_key: null
+  epochs: 100
   warmpup: False
-  toy_data: False
+  toy_data: True
   #  only_train_rel  only_parse
   #    True           True     >> invalid
   #    True           False    >> fix seg_det, train rel

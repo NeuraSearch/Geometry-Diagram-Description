@@ -159,6 +159,14 @@ def main(args):
     if args.resume:
         print(f"Restore model from {os.path.join(str(MAIN_PATH / args.save_dir), args.resume)}")
         checkpoint = torch.load(os.path.join(str(MAIN_PATH / args.save_dir), args.resume), map_location="cpu")
+
+        # state_dict = model_without_ddp.state_dict()
+        # for name, param in checkpoint["model"].items():            
+        #     if not name.startswith("rel_generator."):
+        #         state_dict[name].copy_(param)
+            
+        # model_without_ddp.load_state_dict(state_dict)
+        
         model_without_ddp.load_state_dict(checkpoint["model"])
         # if we freeze the seg_det module, we train the rel module. Actually, we start a new train procedure.
         if not args.only_train_rel: 

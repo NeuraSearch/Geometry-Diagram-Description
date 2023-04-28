@@ -48,6 +48,8 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
         
         """ 2. parse text_symbols and geos. """
         # {"angle": [point] or [] , "length": [line] or []}
+        # print("per_ocr_res: ", per_ocr_res)
+
         text_symbols_geos_rel, points, lines, circles = parse_text_symbol_rel_per_data(
             per_sym_geo_rel["text_symbol_geo_rel"], 
             per_ocr_res, 
@@ -55,6 +57,17 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
             per_sym_geo_rel["head_symbol_geo_rel"]
         )
         text_symbols_parse_results.append(text_symbols_geos_rel)
+        
+        # for p in points:
+        #     print(p.ref_name)
+
+        # for l in lines:
+        #     print(l.ref_name)
+
+        # for c in circles:
+        #     print(c.ref_name)
+        
+        # input()
         
         """ 3. parse congruent. """
         # {"[]angle_symbols", "bar_symbols", "parallel_symbols", "perpendicular"}
@@ -116,10 +129,13 @@ def parse_geo_rel_per_data(geo_rel):
         
         for p in range(num_points):
             for l in range(num_lines):
+                # print(pl_rels[p, :])
                 if pl_rels[p, l].item() == 1:
+                    # print("l1: ", l)
                     points[p].rel_endpoint_lines.append(lines[l])
                     lines[l].rel_endpoint_points.append(points[p])
                 elif pl_rels[p, l].item() == 2:
+                    # print("l2: ", l)
                     points[p].rel_online_lines.append(lines[l])
                     lines[l].rel_online_points.append(points[p])
     
@@ -164,7 +180,11 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
     """ parse text symbol and geo, head rel. """
     total_text_sym = text_sym_geo_rel.size(0)
     for i in range(total_text_sym):
+        # print(text_sym_geo_rel[i])
         max_ids = torch.argmax(text_sym_geo_rel[i]).item()
+        # print("max_ids: ", max_ids)
+        # print(len(points), len(lines), len(circles))
+        # input()
         
         # if relevant to P, L, C, we just assign ocr of this sym to P, L, C
         if func["points"](max_ids):
