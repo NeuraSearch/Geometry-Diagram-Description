@@ -11,9 +11,9 @@ main_args:
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/PGDP5K/test"
   aspect_ratio_group_factor: 3
-  train_img_per_batch: 20
-  test_img_per_batch: 20
-  workers: 1
+  train_img_per_batch: 10
+  test_img_per_batch: 10
+  workers: 8
   dist_url: "env://"
   sync_bn: True
   amp: False
@@ -24,7 +24,7 @@ main_args:
   # wandb_key: null
   epochs: 100
   warmpup: False
-  toy_data: True
+  toy_data: False
   #  only_train_rel  only_parse
   #    True           True     >> invalid
   #    True           False    >> fix seg_det, train rel

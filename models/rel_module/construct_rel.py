@@ -122,8 +122,6 @@ class GeotoGeo(nn.Module):
             points_lines = points_expand + lines_expand                  # [p, l, 2h]
             points_lines_rel = self.combine_point_line_layer(points_lines) # [p, l, 3]
             
-            
-            
         point_circles_rel = None
         if len(points) != 0 and len(circles) != 0:
             # combine point and circle
@@ -233,7 +231,7 @@ class SymtoGeo(nn.Module):
         
         self.sigmoid_ac = nn.Sigmoid()
         
-        self.bce_with_logits_loss = nn.BCEWithLogitsLoss()
+        self.bce_with_logits_loss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([10.]))
    
     
     def forward(self, all_geo_info, all_sym_info, all_geo_rels, targets_sym=None):
@@ -495,28 +493,6 @@ class SymtoGeo(nn.Module):
             try:
                 if pred_logits != None:
                     target_ids = target[sym_geo_key]
-                    
-                    # print(sym_geo_key)
-                    # for i in range(pred_logits.size(0)):
-                    #     if sym_geo_key in mask_cache:
-                    #         print("mask_cache: ", mask_cache[sym_geo_key])
-                    #     else:
-                    #         if "angle" in sym_geo_key:
-                    #             print("mask_cache: ", mask_cache["angle_geo_rel"])
-                    #         if "bar" in sym_geo_key:
-                    #             print("mask_cache: ", mask_cache["bar_geo_rel"])
-                    #         if "parallel" in sym_geo_key:
-                    #             print("mask_cache: ", mask_cache["parallel_geo_rel"])
-                    #         if "perpendicular" in sym_geo_key:
-                    #             print("mask_cache: ", mask_cache["perpendicular_geo_rel"])   
-                    #     print("pred_logits: ", pred_logits[i, :])
-                    #     print(target_ids[i, :])
-                    #     print(self.bce_with_logits_loss(input=pred_logits[i, :].squeeze(-1), target=target_ids[i, :].to(torch.float)))
-                    #     print()
-                    #     print()
-                    #     print()
-                    #     input()
-                
                     per_data_loss[sym_geo_key] = self.bce_with_logits_loss(input=pred_logits.squeeze(-1), target=target_ids.to(torch.float))
                 
                 else:

@@ -87,7 +87,8 @@ def main(args):
             test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset)
     else:
         if args.is_train:
-            train_sampler = torch.utils.data.RandomSampler(train_dataset)
+            # train_sampler = torch.utils.data.RandomSampler(train_dataset)
+            train_sampler = torch.utils.data.SequentialSampler(train_dataset)
             eval_sampler = torch.utils.data.SequentialSampler(eval_dataset)
         else:
             test_sampler = torch.utils.data.SequentialSampler(test_dataset)
@@ -169,7 +170,7 @@ def main(args):
         
         # model_without_ddp.load_state_dict(checkpoint["model"])
         # if we freeze the seg_det module, we train the rel module. Actually, we start a new train procedure.
-        if not args.only_train_rel: 
+        if not args.only_train_rel and args.only_parse: 
             optimizer.load_state_dict(checkpoint["optimizer"])
             lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
             args.start_epoch = checkpoint["epoch"] + 1

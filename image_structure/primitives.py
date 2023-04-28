@@ -80,10 +80,14 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
     for per_data_result in text_symbols_parse_results:
         angles_res, lines_res = generate_for_text_symbols(per_data_result)
         
+        # print("per_data_result: ", per_data_result)
+        
         per_data_text_symbol_nl = {
             "angle": angles_res,    # [str, str, ...] or []
             "length": lines_res,
         }
+        # print("angles_res: ", angles_res)
+        # print("lines_res: ", lines_res)
         
         results.append(per_data_text_symbol_nl)
         
@@ -113,6 +117,12 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
                 if res != None:
                     # here, res is either List[str, str, ...] or []
                     per_data_other_symbol_nl["perpendicular"] = res
+        
+        # print("per_data_result: ", per_data_result)
+        # print("per_data_other_symbol_nl: ", per_data_other_symbol_nl)
+        # print()
+        # print()
+        # print()
         
         results[idx].update(per_data_other_symbol_nl)    
     
@@ -299,12 +309,12 @@ def extract_two_points_line(line):
     candidates = []
     for p in line.rel_endpoint_points:
         if p.ref_name and p not in candidates:
-            candidates.append(p.ref_name)
+            candidates.append(p)
         if len(candidates) == 2:
             break
     
     if len(candidates) >= 2:
-        return candidates
+        return [candidates[0].ref_name, candidates[1].ref_name]
     else:
         for p in line.rel_online_points:
             if p.ref_name and p not in candidates:
@@ -313,7 +323,7 @@ def extract_two_points_line(line):
                 break
     
     if len(candidates) == 2:
-        return candidates
+        return [candidates[0].ref_name, candidates[1].ref_name]
     else:
         return None
 

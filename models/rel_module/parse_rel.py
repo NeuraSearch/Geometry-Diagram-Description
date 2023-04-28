@@ -93,7 +93,7 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
                         other_symbols_geos_rel[sym] = res
                 elif "perpendicular" in sym:
                     res = extract_perperdicular_geo(sym_rel, points)
-                    if len(res) != 0:
+                    if res != None:
                         other_symbols_geos_rel["perpendicular"] = res
                         
         other_symbols_parse_results.append(other_symbols_geos_rel)
@@ -178,75 +178,119 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
     func, geo_start_ids = build_ids_assignment(points, lines, circles, sym_head)
     
     """ parse text symbol and geo, head rel. """
+    idx_cache = {}
     total_text_sym = text_sym_geo_rel.size(0)
     for i in range(total_text_sym):
-        # print(text_sym_geo_rel[i])
-        max_ids = torch.argmax(text_sym_geo_rel[i]).item()
-        # print("max_ids: ", max_ids)
-        # print(len(points), len(lines), len(circles))
-        # input()
-        
-        # if relevant to P, L, C, we just assign ocr of this sym to P, L, C
-        if func["points"](max_ids):
-            which_point_ids = max_ids - geo_start_ids["points"]
-            points[which_point_ids].ref_name = ocr[i]
-        elif func["lines"](max_ids):
-            which_line_ids = max_ids - geo_start_ids["lines"]
-            lines[which_line_ids].ref_name = ocr[i]
-        elif func["circles"](max_ids):
-            which_circle_ids = max_ids - geo_start_ids["circles"]
-            circles[which_circle_ids].ref_name = ocr[i]
 
-        elif func["LPL"](max_ids):
-            which_point_ids = max_ids - geo_start_ids["LPL"]
-            ocr_str = ocr[i]
-            res = resolve_LPL(points, which_point_ids, ocr_str)
-            if res != None:
-                parse_res["angle"].append(res)    # (Point, angle_degree_in_int)
+        max_value_cand, max_idx_cand = torch.sort(text_sym_geo_rel[i].squeeze(-1), descending=True)
+        for val, idx in zip(max_value_cand.tolist(), max_idx_cand.tolist()):
+            if (idx not in idx_cache) and (val > 0.5):
+                max_ids = idx
         
-        elif func["PLP"](max_ids):
-            which_line_ids = max_ids - geo_start_ids["PLP"]
-            ocr_str = ocr[i]
-            res = resolve_PLP(lines, which_line_ids, ocr_str)
-            if res != None:
-                parse_res["length"].append(res)
-        
-        elif func["PCP"](max_ids):
-            which_circle_ids = max_ids - geo_start_ids["PCP"]
-            ocr_str = ocr[i]
-            res = resolve_PCP(circles, which_circle_ids, ocr_str)
-            if res != None:
-                parse_res["angle"].append(res)
+                # print("text_sym_geo_rel[i].squeeze(-1): ", text_sym_geo_rel[i].squeeze(-1))
+                # print("max_val_cand: ", max_value_cand)
+                # print("max_ids: ", max_ids)
+                # print(len(points), len(lines), len(circles))
+                # print()
+                # print()
+                # print()
+                # input()
                 
-        elif func["head"](max_ids):
-            which_head_ids = max_ids - geo_start_ids["head"]
-            this_head_rel = sym_head[which_head_ids]
-            this_head_point_max_ids = torch.argmax(this_head_rel).item()
-            
-            
-            if this_head_point_max_ids - len(points) < 0:
-                points[this_head_point_max_ids].ref_name = ocr[i]
-            
-                # head_sym points to Points, LPL, PLP, PCP,
-                # since func["points"], func["lines"], func["circles"] is consistent to
-                #       func["LPL"] - len(points),    funcp["PLP"] - len(points),  func["PCP"] - len(points)
-                # we use func["points"], func["lines"], func["circles"] to determine which geo this head points to
-            elif func["points"](this_head_point_max_ids - len(points)):
-                which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["points"]
-                res = resolve_LPL(points, which_ids_head_point, ocr[i])
-                if res != None:
-                    parse_res["angle"].append(res)
-            elif func["lines"](this_head_point_max_ids - len(points)):
-                which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["lines"]
-                res = resolve_PLP(lines, which_ids_head_point, ocr[i])
-                if res != None:
-                    parse_res["length"].append(res)
-            elif func["circles"](this_head_point_max_ids - len(points)):
-                which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["circles"]
-                res = resolve_PCP(circles, which_ids_head_point, ocr[i])
-                if res != None:
-                    parse_res["angles"].append(res)
-        
+                # if relevant to P, L, C, we just assign ocr of this sym to P, L, C
+                if func["points"](max_ids):
+                    which_point_ids = max_ids - geo_start_ids["points"]
+                    points[which_point_ids].ref_name = ocr[i]
+                    res_ = re.findall(r"[A-Z]{1}", ocr[i])
+                    if len(res_) > 0:
+                        points[which_point_ids].ref_name = res_[0]
+                        idx_cache[idx] = None
+                    else:
+                        continue
+                elif func["lines"](max_ids):
+                    which_line_ids = max_ids - geo_start_ids["lines"]
+                    res_ = re.findall(r"[a-z]{1}", ocr[i])
+                    if len(res_) > 0:
+                        lines[which_line_ids].ref_name = res_[i]
+                        idx_cache[idx] = None
+                    else:
+                        continue
+                elif func["circles"](max_ids):
+                    which_circle_ids = max_ids - geo_start_ids["circles"]
+                    circles[which_circle_ids].ref_name = ocr[i]
+
+                elif func["LPL"](max_ids):
+                    which_point_ids = max_ids - geo_start_ids["LPL"]
+                    ocr_str = ocr[i]
+                    res = resolve_LPL(points, which_point_ids, ocr_str)
+                    if res != None:
+                        parse_res["angle"].append(res)    # (Point, angle_degree_in_int)
+                        idx_cache[idx] = None
+                    else:
+                        continue
+                
+                elif func["PLP"](max_ids):
+                    which_line_ids = max_ids - geo_start_ids["PLP"]
+                    ocr_str = ocr[i]
+                    res = resolve_PLP(lines, which_line_ids, ocr_str)
+                    if res != None:
+                        parse_res["length"].append(res)
+                        idx_cache[idx] = None
+                    else:
+                        continue
+                
+                elif func["PCP"](max_ids):
+                    which_circle_ids = max_ids - geo_start_ids["PCP"]
+                    ocr_str = ocr[i]
+                    res = resolve_PCP(circles, which_circle_ids, ocr_str)
+                    if res != None:
+                        parse_res["angle"].append(res)
+                        idx_cache[idx] = None
+                    else:
+                        continue
+                        
+                elif func["head"](max_ids):
+                    which_head_ids = max_ids - geo_start_ids["head"]
+                    this_head_rel = sym_head[which_head_ids]
+                    this_head_point_max_ids = torch.argmax(this_head_rel).item()
+                    
+                    
+                    if this_head_point_max_ids - len(points) < 0:
+                        
+                        res_ = re.findall(r"[A-Z]{1}", ocr[i])
+                        if len(res_) > 0:
+                            points[this_head_point_max_ids].ref_name = res_[0]
+                            idx_cache[idx] = None
+                        else:
+                            continue
+                        # head_sym points to Points, LPL, PLP, PCP,
+                        # since func["points"], func["lines"], func["circles"] is consistent to
+                        #       func["LPL"] - len(points),    funcp["PLP"] - len(points),  func["PCP"] - len(points)
+                        # we use func["points"], func["lines"], func["circles"] to determine which geo this head points to
+                    elif func["points"](this_head_point_max_ids - len(points)):
+                        which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["points"]
+                        res = resolve_LPL(points, which_ids_head_point, ocr[i])
+                        if res != None:
+                            parse_res["angle"].append(res)
+                            idx_cache[idx] = None
+                        else:
+                            continue
+                    elif func["lines"](this_head_point_max_ids - len(points)):
+                        which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["lines"]
+                        res = resolve_PLP(lines, which_ids_head_point, ocr[i])
+                        if res != None:
+                            parse_res["length"].append(res)
+                            idx_cache[idx] = None
+                        else:
+                            continue
+                    elif func["circles"](this_head_point_max_ids - len(points)):
+                        which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["circles"]
+                        res = resolve_PCP(circles, which_ids_head_point, ocr[i])
+                        if res != None:
+                            parse_res["angles"].append(res)
+                            idx_cache[idx] = None
+                        else:
+                            continue
+                
     return parse_res, points, lines, circles
 
 def build_ids_assignment(points, lines, circles, sym_head):
@@ -310,15 +354,15 @@ def extract_congruent_geo(symbol_geo_rel, geo):
     
     total_angles = symbol_geo_rel.size(0)
     
-    idx_cache = []
+    idx_cache = {}
     results = []
     for i in range(total_angles):
-        select_geo_idx = torch.argmax(symbol_geo_rel[i]).item() # each angle <-> a geo
-        if select_geo_idx not in idx_cache:
-            idx_cache.append(select_geo_idx)
-            results.append(geo[select_geo_idx])
-        else:
-            continue
+        max_value_cand, max_idx_cand = torch.sort(symbol_geo_rel[i].squeeze(-1), descending=True)
+        for val, idx in zip(max_value_cand.tolist(), max_idx_cand.tolist()):
+            if (idx not in idx_cache) and (val > 0.5):
+                results.append(geo[idx])
+                idx_cache[idx] = None
+                break
     
     return results if len(results) > 1 else None
 
@@ -326,13 +370,14 @@ def extract_perperdicular_geo(perpendicular_geo_rel, geo):
     
     total_sym = perpendicular_geo_rel.size(0)
     
+    idx_cache = {}
     points = []
     for i in range(total_sym):
-        select_point_idx = torch.argmax(perpendicular_geo_rel[i]).item()
-        
-        select_point = geo[select_point_idx]
-        
-        if select_point.can_perpendicular:
-            points.append(geo[select_point_idx])    
-    
-    return points
+        max_value_cand, max_idx_cand = torch.sort(perpendicular_geo_rel[i].squeeze(-1), descending=True)
+        for val, idx in zip(max_value_cand.tolist(), max_idx_cand.tolist()):
+            if (idx not in idx_cache) and (val > 0.5):
+                points.append(geo[idx])
+                idx_cache[idx] = None
+                break
+
+    return points if len(points) > 0 else None

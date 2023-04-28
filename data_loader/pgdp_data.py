@@ -647,17 +647,34 @@ class GEODataset(torch.utils.data.Dataset):
             if rel[0] in sym_dict:
                 if "angle" in sym_type:     # LPL
                     p_idx = [int(geo[1:]) for geo in rel[1] if geo[0] == "p"]
-                    symbol_geo_rel[sym_dict[rel[0]], p_idx] = 1.
+                    # print("1p_idx: ", p_idx)
+                    # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
+                    symbol_geo_rel[sym_dict[rel[0]], p_idx[0]] = 1.
+                    # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
+                    # input()
                 elif "bar" in sym_type:     # PLP
                     l_idx = [int(geo[1:]) for geo in rel[1] if geo[0] == "l"]
-                    symbol_geo_rel[sym_dict[rel[0]], l_idx] = 1.
+                    # print("2l_idx: ", l_idx)
+                    # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
+                    if len(l_idx) != 0:
+                        symbol_geo_rel[sym_dict[rel[0]], l_idx[0]] = 1.
+                    # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
+                    # input()
                 elif "parallel" in sym_type: # l
                     assert len(rel[1]) == 1
                     l_idx = int(rel[1][0][1:])
+                    # print("3l_idx: ", l_idx)
+                    # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
                     symbol_geo_rel[sym_dict[rel[0]], l_idx] = 1.
+                    # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
+                    # input()
                 elif "perpendicular" in sym_type: # LPL
                     p_idx = [int(geo[1:]) for geo in rel[1] if geo[0] == "p"]
-                    symbol_geo_rel[sym_dict[rel[0]], p_idx] = 1.
+                    # print("4l_idx: ", p_idx)
+                    # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
+                    symbol_geo_rel[sym_dict[rel[0]], p_idx[0]] = 1.
+                    # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
+                    # input()
                 else:
                     raise ValueError
         

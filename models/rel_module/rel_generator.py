@@ -117,7 +117,7 @@ class RelGenerator(nn.Module):
                 ocr_results=[data["text_symbols_str"] for data in all_sym_info],
                 threshold=self.cfg.threshold,
             )
-                        
+            
             natural_language_results = convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_parse_results)
 
             return natural_language_results
