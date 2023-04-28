@@ -58,10 +58,10 @@ class Circle:
         self.ids_name = f"c{ids}"
 
         self.ref_name = None
-        
+                
         self.rel_on_circle_points = []
         self.rel_center_points = []
-
+            
 def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_parse_results):
     """
     Args:
@@ -126,15 +126,23 @@ def generate_for_text_symbols(per_data_result):
     for info in angles_info:
         point = info[0]
         degree = info[1]
+
+        if type(point) == Point:
         
-        if point.angle_name:
-            angles_res.append(f"Angle {point.angle_name} has degree of {str(degree)}.")
-        else:
-            # find two lines for angle
-            angle_name = extract_two_edges_for_point(point)
+            if point.angle_name:
+                angles_res.append(f"Angle {point.angle_name} has degree of {str(degree)}.")
+            else:
+                # find two lines for angle
+                angle_name = extract_two_edges_for_point(point)
+                if angle_name != None:
+                    angles_res.append(f"Angle {angle_name[0]}{angle_name[1]}{angle_name[2]} has degree of {str(degree)}.")
+        
+        elif type(point) == Circle:
+            
+            angle_name = extract_angle_from_circle(point)
             if angle_name != None:
                 angles_res.append(f"Angle {angle_name[0]}{angle_name[1]}{angle_name[2]} has degree of {str(degree)}.")
-    
+        
     # length
     lines_res = []
     lines_info = per_data_result["length"]
@@ -230,9 +238,9 @@ def generate_for_perpendicular(points):
         lines = extract_two_edges_for_point(point, force=True)
         if lines != None:
             if lines[1] != None:
-                res.append(f"Line {lines_name[0]} is perpendicular with Line {lines_name[1]} at Point {lines[1]}.")
+                res.append(f"Line {lines[0]} is perpendicular with Line {lines[2]} at Point {lines[1]}.")
             else:
-                res.append(f"Line {lines_name[0]} is perpendicular with Line {lines_name[1]}.")
+                res.append(f"Line {lines[0]} is perpendicular with Line {lines[2]}.")
 
     if len(res) > 0:
         return res
@@ -243,7 +251,8 @@ def extract_two_edges_for_point(point, force=False):
     
     if point.ref_name or force:
         mid_name = point.ref_name
-
+        
+        
         candidates = []
         # 1. select from lines, where point is their endpoint
         if len(point.rel_endpoint_lines) > 0:
@@ -305,5 +314,31 @@ def extract_two_points_line(line):
     
     if len(candidates) == 2:
         return candidates
+    else:
+        return None
+
+def extract_angle_from_circle(circle):
+    
+    if len(circle.rel_center_points) == 0:
+        return None
+    
+    center_name = None
+    for center in circle.rel_center_points:
+        if center.ref_name:
+            center_name = center.ref_name
+            break
+    
+    if center_name == None:
+        return None
+    
+    other_points = []
+    for point in circle.rel_center_points:
+        if point.ref_name:
+            other_points.append(point.ref_name)
+            if len(other_points) == 2:
+                break
+    
+    if len(other_points) == 2:
+        return [other_points[0].ref_name, center_name, other_points[1].ref_name]
     else:
         return None
