@@ -43,7 +43,8 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
         points, lines, circles = parse_geo_rel_per_data(per_geo_rel)
         
         if len(points) == 0:
-            parse_results.append(None)
+            text_symbols_parse_results.append(None)
+            other_symbols_parse_results.append(None)
             continue
         
         """ 2. parse text_symbols and geos. """
