@@ -287,7 +287,7 @@ def extract_two_edges_for_point(point, force=False):
                 for line in point.rel_online_lines:
                     for l_p in line.rel_endpoint_points:
                         if l_p.ref_name and l_p != point:
-                            if len(candiates) < 2:
+                            if len(candidates) < 2:
                                 candidates.append(l_p)
                                 break   # each line provide one point
                         
