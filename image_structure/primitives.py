@@ -52,6 +52,9 @@ class Line:
             else:
                 return self.ids_name
 
+    def __eq__(self, other):
+        return self.ids == other.ids
+
 class Circle:
     def __init__(self, ids):
         self.ids = ids
