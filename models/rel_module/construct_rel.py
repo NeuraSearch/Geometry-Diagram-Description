@@ -424,12 +424,13 @@ class SymtoGeo(nn.Module):
                         continue
 
                 elif "perpendicular" in symbol_name:
-                    sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
-                        symbols=each_symbol_info,
-                        geo_matrix=LPL_matrix,
-                        mask=LPL_mask,
-                        symbol_type="perpendicular")
-                    continue
+                    if each_symbol_info.size(0) > 1 and LPL_matrix != None:     
+                        sym_to_geo_rel_dict[f"{symbol_name}_geo_rel"] = self._construct_rel_between_text_symbols_and_geo(
+                            symbols=each_symbol_info,
+                            geo_matrix=LPL_matrix,
+                            mask=LPL_mask,
+                            symbol_type="perpendicular")
+                        continue
         
         return sym_to_geo_rel_dict
         
