@@ -330,7 +330,8 @@ def build_optmizer(cfg, model):
     params = []
     for key, value in model.named_parameters():
         prefix = "rel_generator." if get_world_size() == 1 else "module.rel_generator."
-        if (cfg.only_train_rel) and (not key.startswith(prefix)):
+        prefix_2 = "det_seg_model.visemb" if get_world_size() == 1 else "module.det_seg_model.visemb"
+        if (cfg.only_train_rel) and (not key.startswith(prefix)) and (not key.startswith(prefix_2)):
             value.requires_grad = False
             continue
         if not value.requires_grad:
