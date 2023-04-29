@@ -27,10 +27,10 @@ class SymVectorHead(nn.Module):
         head_tower.append(nn.ReLU())
         self.add_module("sym_head_tower", nn.Sequential(*head_tower))
 
-        self.sym_linear = nn.Sequential(
-            nn.Linear(out_channel, out_channel),
-            nn.ReLU(),
-        )
+        # self.sym_linear = nn.Sequential(
+        #     nn.Linear(out_channel, out_channel),
+        #     nn.ReLU(),
+        # )
             
     def forward(self, feature):
         """
@@ -43,10 +43,10 @@ class SymVectorHead(nn.Module):
         # [b, out_channel]
         head_out = head_out.flatten(start_dim=1)
         
-        # [b, out_channel]
-        linear_out = self.sym_linear(head_out)
+        # # [b, out_channel]
+        # linear_out = self.sym_linear(head_out)
         
-        return linear_out
+        return head_out
         
 class SymVectorBuild(nn.Module):
     
@@ -62,38 +62,18 @@ class SymVectorBuild(nn.Module):
         
         self.roi_output_size = cfg.sym_roi_output_size
         self.fpn_strides = cfg.fpn_strides
-        
-        self.text_sym_head = SymVectorHead(
-            inp_channel=cfg.backbone_out_channels,
-            out_channel=cfg.sym_embed_size,
-            kernel_size=self.roi_output_size,
-        )
-        self.head_sym_head = SymVectorHead(
-            inp_channel=cfg.backbone_out_channels,
-            out_channel=cfg.sym_embed_size,
-            kernel_size=self.roi_output_size,
-        )
-        self.angle_sym_head = SymVectorHead(
-            inp_channel=cfg.backbone_out_channels,
-            out_channel=cfg.sym_embed_size,
-            kernel_size=self.roi_output_size,
-        )
-        self.bar_sym_head = SymVectorHead(
-            inp_channel=cfg.backbone_out_channels,
-            out_channel=cfg.sym_embed_size,
-            kernel_size=self.roi_output_size,
-        )
-        self.parallel_sym_head = SymVectorHead(
-            inp_channel=cfg.backbone_out_channels,
-            out_channel=cfg.sym_embed_size,
-            kernel_size=self.roi_output_size,
-        )
-        self.perpendicular_sym_head = SymVectorHead(
+            
+        self.sym_head = SymVectorHead(
             inp_channel=cfg.backbone_out_channels,
             out_channel=cfg.sym_embed_size,
             kernel_size=self.roi_output_size,
         )
         
+        self.sym_embeddings = nn.Embedding(15, cfg.sym_embed_size)
+        
+        self.fuse_nn = nn.Linear(cfg.sym_embed_size, cfg.sym_embed_size)
+        self.fuse_ac = nn.ReLU()
+
         self.easyocr = easyocr.Reader(["en"], gpu=torch.cuda.is_available())
         # self.easyocr = easyocr.Reader(["en"], gpu=next(self.parameters()).device)
         
@@ -200,17 +180,29 @@ class SymVectorBuild(nn.Module):
                     if key == "text_symbols":
                         # [[1, c, output_size, output_size], [1, c, output_size, output_size], ...] 
                         # -> [N, c, output_size, output_size] -> [N, c_2]
-                        symbols_info[key] = self.text_sym_head(torch.cat(value, dim=0))
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=0)
                     elif key == "perpendicular_symbols":
-                        symbols_info[key] = self.perpendicular_sym_head(torch.cat(value, dim=0))
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=1)
                     elif key == "head_symbols":
-                        symbols_info[key] = self.head_sym_head(torch.cat(value, dim=0))
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=2)
                     elif key in ["angle_symbols", "double_angle_symbols", "triple_angle_symbols", "quad_angle_symbols", "penta_angle_symbols"]:
-                        symbols_info[key] = self.angle_sym_head(torch.cat(value, dim=0))
+                        if key == "angle_symbols": sym_ids = 3
+                        elif key == "double_angle_symbols": sym_ids = 4
+                        elif key == "triple_angle_symbols": sym_ids = 5
+                        elif key == "quad_angle_symbols": sym_ids = 6
+                        elif key == "penta_angle_symbols": sym_ids = 7
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=sym_ids)
                     elif key in ["bar_symbols", "double_bar_symbols", "triple_bar_symbols", "quad_bar_symbols"]:
-                        symbols_info[key] = self.bar_sym_head(torch.cat(value, dim=0))
+                        if key == "bar_symbols": sym_ids = 8
+                        if key == "double_bar_symbols": sym_ids = 9
+                        if key == "triple_bar_symbols": sym_ids = 10
+                        if key == "quad_bar_symbols": sym_ids = 11
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=sym_ids)
                     elif key in ["parallel_symbols", "double_parallel_symbols", "triple_parallel_symbols"]:
-                        symbols_info[key] = self.parallel_sym_head(torch.cat(value, dim=0))
+                        if key == "parallel_symbols": sym_ids = 12
+                        if key == "double_parallel_symbols": sym_ids = 13
+                        if key == "triple_parallel_symbols": sym_ids = 14
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=sym_ids)
                     elif key == "text_symbols_str":
                         pass
                     else:
@@ -287,17 +279,29 @@ class SymVectorBuild(nn.Module):
                     if key == "text_symbols":
                         # [[1, c, output_size, output_size], [1, c, output_size, output_size], ...] 
                         # -> [N, c, output_size, output_size] -> [N, c_2]
-                        symbols_info[key] = self.text_sym_head(torch.cat(value, dim=0))
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=0)
                     elif key == "perpendicular_symbols":
-                        symbols_info[key] = self.perpendicular_sym_head(torch.cat(value, dim=0))
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=1)
                     elif key == "head_symbols":
-                        symbols_info[key] = self.head_sym_head(torch.cat(value, dim=0))
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=2)
                     elif key in ["angle_symbols", "double_angle_symbols", "triple_angle_symbols", "quad_angle_symbols", "penta_angle_symbols"]:
-                        symbols_info[key] = self.angle_sym_head(torch.cat(value, dim=0))
+                        if key == "angle_symbols": sym_ids = 3
+                        elif key == "double_angle_symbols": sym_ids = 4
+                        elif key == "triple_angle_symbols": sym_ids = 5
+                        elif key == "quad_angle_symbols": sym_ids = 6
+                        elif key == "penta_angle_symbols": sym_ids = 7
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=sym_ids)
                     elif key in ["bar_symbols", "double_bar_symbols", "triple_bar_symbols", "quad_bar_symbols"]:
-                        symbols_info[key] = self.bar_sym_head(torch.cat(value, dim=0))
+                        if key == "bar_symbols": sym_ids = 8
+                        if key == "double_bar_symbols": sym_ids = 9
+                        if key == "triple_bar_symbols": sym_ids = 10
+                        if key == "quad_bar_symbols": sym_ids = 11
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=sym_ids)
                     elif key in ["parallel_symbols", "double_parallel_symbols", "triple_parallel_symbols"]:
-                        symbols_info[key] = self.parallel_sym_head(torch.cat(value, dim=0))
+                        if key == "parallel_symbols": sym_ids = 12
+                        if key == "double_parallel_symbols": sym_ids = 13
+                        if key == "triple_parallel_symbols": sym_ids = 14
+                        symbols_info[key] = self.fuse(torch.cat(value, dim=0), sym_ids=sym_ids)
                     elif key == "text_symbols_str":
                         pass
                     else:
@@ -310,6 +314,17 @@ class SymVectorBuild(nn.Module):
             all_symbols_info.append(symbols_info)
         
         return all_symbols_info
+
+    def fuse(self, sym_feat, sym_ids):
+        
+        symbols_num = sym_feat.size(0)
+        symbols_ids = torch.LongTensor([sym_ids]).repeat(symbols_num).to(sym_feat.device)
+        
+        symbols_embeddings = self.sym_embeddings(symbols_ids)   # [N, h]
+        symbols_feat = self.sym_head(sym_feat)                  # [N, h]
+        
+        return self.fuse_ac(self.fuse_nn(symbols_embeddings + symbols_feat))
+        
 
     def ocr(self, image, box):
         # 这里加一个transforms只要resize, RandomHorizontalFlip,

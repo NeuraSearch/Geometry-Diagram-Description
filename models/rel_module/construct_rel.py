@@ -178,6 +178,8 @@ class SymtoGeo(nn.Module):
             nn.LayerNorm(sym_embed_size),
         )
         
+        self.PLC_embedding = nn.Embedding(3, sym_embed_size)
+        
         self.geo_matrix_layer = nn.Sequential(
             nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
@@ -532,16 +534,19 @@ class SymtoGeo(nn.Module):
         # !!! might cause inf in tensor if enable mix-precision, just set "amp" False will solve this        
         # [middle, margin] * [margin, h] -> [middle, h] concat [middle, h] -> [middle, 2h] -> [middle, h]
         if rel == "lpl":
-            # geo_geo_matrix = self.LPL_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
-            geo_geo_matrix = self.LPL_layer(middle_geo)
+            geo_geo_matrix = self.LPL_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
+            geo_geo_matrix += self.PLC_embedding(torch.LongTensor([0]).repeat(geo_geo_matrix.size(0)).to(geo_geo_matrix.device))        
+            # geo_geo_matrix = self.LPL_layer(middle_geo)
             # geo_geo_matrix = middle_geo
         elif rel == "plp":
-            # geo_geo_matrix = self.PLP_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
-            geo_geo_matrix = self.PLP_layer(middle_geo)
+            geo_geo_matrix = self.PLP_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
+            geo_geo_matrix += self.PLC_embedding(torch.LongTensor([1]).repeat(geo_geo_matrix.size(0)).to(geo_geo_matrix.device))        
+            # geo_geo_matrix = self.PLP_layer(middle_geo)
             # geo_geo_matrix = middle_geo
         elif rel == "pcp":
-            # geo_geo_matrix = self.PCP_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
-            geo_geo_matrix = self.PCP_layer(middle_geo)
+            geo_geo_matrix = self.PCP_layer(torch.matmul(geo_geo_mask, margin_geo) + middle_geo)
+            geo_geo_matrix += self.PLC_embedding(torch.LongTensor([2]).repeat(geo_geo_matrix.size(0)).to(geo_geo_matrix.device))        
+            # geo_geo_matrix = self.PCP_layer(middle_geo)
             # geo_geo_matrix = middle_geo
         else:
             raise ValueError(f"Unknown rel type: ({rel})")    

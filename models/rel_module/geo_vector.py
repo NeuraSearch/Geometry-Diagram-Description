@@ -12,52 +12,27 @@ class GeoVectorHead(nn.Module):
     
     def __init__(self, inp_channel, out_channel):
         super(GeoVectorHead, self).__init__()
-        
-        point_head_tower = []
-        point_head_tower.append(
-            nn.Conv2d(
-                in_channels=inp_channel,
-                out_channels=out_channel,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-                bias=True,
-            )
-        )
-        point_head_tower.append(nn.GroupNorm(32, out_channel))
-        point_head_tower.append(nn.ReLU())
-        self.add_module("geo_point_head_tower", nn.Sequential(*point_head_tower))
 
-        line_head_tower = []
-        line_head_tower.append(
-            nn.Conv2d(
-                in_channels=inp_channel,
-                out_channels=out_channel,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-                bias=True,
-            )
-        )
-        line_head_tower.append(nn.GroupNorm(32, out_channel))
-        line_head_tower.append(nn.ReLU())
-        self.add_module("geo_line_head_tower", nn.Sequential(*line_head_tower))
-
-        circle_head_tower = []
-        circle_head_tower.append(
-            nn.Conv2d(
-                in_channels=inp_channel,
-                out_channels=out_channel,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-                bias=True,
-            )
-        )
-        circle_head_tower.append(nn.GroupNorm(32, out_channel))
-        circle_head_tower.append(nn.ReLU())
-        self.add_module("geo_circle_head_tower", nn.Sequential(*circle_head_tower))
+        # head_tower = []
+        # head_tower.append(
+        #     nn.Conv2d(
+        #         in_channels=inp_channel,
+        #         out_channels=out_channel,
+        #         kernel_size=3,
+        #         stride=1,
+        #         padding=1,
+        #         bias=True,
+        #     )
+        # )
+        # head_tower.append(nn.GroupNorm(32, out_channel))
+        # head_tower.append(nn.ReLU())
+        # self.add_module("head_tower", nn.Sequential(*point_head_tower))
         
+        self.geo_embeddings = nn.Embedding(3, out_channel)
+    
+        self.fuse_nn = nn.Linear(out_channel, out_channel)
+        self.fuse_ac = nn.ReLU()
+    
     def forward(self, feature, geo_type):
         """
             feature: [N, c, h, w], N is the aggregate of the points (or lines, or circles) in one data.
@@ -66,21 +41,34 @@ class GeoVectorHead(nn.Module):
         
         # tower_out: [N, geo_embed_size, h, w]
         if geo_type == "point":
-            tower_out = self.geo_point_head_tower(feature)
+           points_num = feature.size(0)
+           points_ids = torch.LongTensor([0]).repeat(points_num).to(feature.device)
+           embeddings = self.geo_embeddings(points_ids)  # [N, geo_embed_size]
         elif geo_type == "line":
-            tower_out = self.geo_line_head_tower(feature)
+           lines_num = feature.size(0)
+           lines_ids = torch.LongTensor([1]).repeat(lines_num).to(feature.device)
+           embeddings = self.geo_embeddings(lines_ids)  # [N, geo_embed_size]
         elif geo_type == "circle":
-            tower_out = self.geo_circle_head_tower(feature)
+           circles_num = feature.size(0)
+           circles_ids = torch.LongTensor([2]).repeat(circles_num).to(feature.device)
+           embeddings = self.geo_embeddings(circles_ids)  # [N, geo_embed_size]
         else:
             raise ValueError(f"Unknown geo_type: ({geo_type})")
             
-        # flatten to [N, geo_embed_size, h*w]
-        tower_out = tower_out.flatten(start_dim=2)
+        # flatten to [N, geo_embed_size, h*w], then GlobalMaxPooling
+        geo_feat_flatten = feature.flatten(start_dim=2).mean(dim=-1)
         
-        # adopot GlobalMeanPooling, [N, geo_embed_size]
-        # ??? alternative: GlobalMaxPooling, tower_out.max(dim=-1)[0]
-        return tower_out.mean(dim=-1)
+        return self.fuse(embeddings, geo_feat_flatten)
 
+    def fuse(self, embeddings, geo_feat):
+        """
+            Args:
+                embeddings: [N, h]
+                geo_feat: [N, h]
+        """
+        return self.fuse_ac(self.fuse_nn(embeddings + geo_feat))
+
+    
 class GeoVectorBuild(nn.Module):
     
     def __init__(self, cfg):
