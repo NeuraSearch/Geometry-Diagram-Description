@@ -186,16 +186,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
         for val, idx in zip(max_value_cand.tolist(), max_idx_cand.tolist()):
             if (idx not in idx_cache) and (val > 0.5):
                 max_ids = idx
-        
-                # print("text_sym_geo_rel[i].squeeze(-1): ", text_sym_geo_rel[i].squeeze(-1))
-                # print("max_val_cand: ", max_value_cand)
-                # print("max_ids: ", max_ids)
-                # print(len(points), len(lines), len(circles))
-                # print()
-                # print()
-                # print()
-                # input()
-                
+                        
                 # if relevant to P, L, C, we just assign ocr of this sym to P, L, C
                 if func["points"](max_ids):
                     which_point_ids = max_ids - geo_start_ids["points"]
@@ -203,19 +194,18 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     if len(res_) > 0:
                         points[which_point_ids].ref_name = res_[0]
                         idx_cache[idx] = None
-                    else:
-                        continue
+                        break
                 elif func["lines"](max_ids):
                     which_line_ids = max_ids - geo_start_ids["lines"]
                     res_ = re.findall(r"[a-z]{1}", ocr[i])
                     if len(res_) > 0:
                         lines[which_line_ids].ref_name = res_[0]
                         idx_cache[idx] = None
-                    else:
-                        continue
+                        break
                 elif func["circles"](max_ids):
                     which_circle_ids = max_ids - geo_start_ids["circles"]
                     circles[which_circle_ids].ref_name = ocr[i]
+                    break
 
                 elif func["LPL"](max_ids):
                     which_point_ids = max_ids - geo_start_ids["LPL"]
@@ -224,8 +214,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     if res != None:
                         parse_res["angle"].append(res)    # (Point, angle_degree_in_int)
                         idx_cache[idx] = None
-                    else:
-                        continue
+                        break
                 
                 elif func["PLP"](max_ids):
                     which_line_ids = max_ids - geo_start_ids["PLP"]
@@ -234,8 +223,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     if res != None:
                         parse_res["length"].append(res)
                         idx_cache[idx] = None
-                    else:
-                        continue
+                        break
                 
                 elif func["PCP"](max_ids):
                     which_circle_ids = max_ids - geo_start_ids["PCP"]
@@ -244,8 +232,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     if res != None:
                         parse_res["angle"].append(res)
                         idx_cache[idx] = None
-                    else:
-                        continue
+                        break
                         
                 elif func["head"](max_ids):
                     which_head_ids = max_ids - geo_start_ids["head"]
@@ -259,8 +246,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                         if len(res_) > 0:
                             points[this_head_point_max_ids].ref_name = res_[0]
                             idx_cache[idx] = None
-                        else:
-                            continue
+                            break
                         # head_sym points to Points, LPL, PLP, PCP,
                         # since func["points"], func["lines"], func["circles"] is consistent to
                         #       func["LPL"] - len(points),    funcp["PLP"] - len(points),  func["PCP"] - len(points)
@@ -271,24 +257,23 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                         if res != None:
                             parse_res["angle"].append(res)
                             idx_cache[idx] = None
-                        else:
-                            continue
+                            break
                     elif func["lines"](this_head_point_max_ids - len(points)):
                         which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["lines"]
                         res = resolve_PLP(lines, which_ids_head_point, ocr[i])
                         if res != None:
                             parse_res["length"].append(res)
                             idx_cache[idx] = None
-                        else:
-                            continue
+                            break
                     elif func["circles"](this_head_point_max_ids - len(points)):
                         which_ids_head_point = this_head_point_max_ids - len(points) - geo_start_ids["circles"]
                         res = resolve_PCP(circles, which_ids_head_point, ocr[i])
                         if res != None:
                             parse_res["angles"].append(res)
                             idx_cache[idx] = None
-                        else:
-                            continue
+                            break
+            else:
+                continue
                 
     return parse_res, points, lines, circles
 
