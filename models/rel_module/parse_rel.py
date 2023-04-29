@@ -199,7 +199,6 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                 # if relevant to P, L, C, we just assign ocr of this sym to P, L, C
                 if func["points"](max_ids):
                     which_point_ids = max_ids - geo_start_ids["points"]
-                    points[which_point_ids].ref_name = ocr[i]
                     res_ = re.findall(r"[A-Z]{1}", ocr[i])
                     if len(res_) > 0:
                         points[which_point_ids].ref_name = res_[0]
@@ -210,7 +209,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     which_line_ids = max_ids - geo_start_ids["lines"]
                     res_ = re.findall(r"[a-z]{1}", ocr[i])
                     if len(res_) > 0:
-                        lines[which_line_ids].ref_name = res_[i]
+                        lines[which_line_ids].ref_name = res_[0]
                         idx_cache[idx] = None
                     else:
                         continue
