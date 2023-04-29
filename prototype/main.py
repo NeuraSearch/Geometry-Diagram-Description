@@ -87,8 +87,8 @@ def main(args):
             test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset)
     else:
         if args.is_train:
-            # train_sampler = torch.utils.data.RandomSampler(train_dataset)
-            train_sampler = torch.utils.data.SequentialSampler(train_dataset)
+            train_sampler = torch.utils.data.RandomSampler(train_dataset)
+            # train_sampler = torch.utils.data.SequentialSampler(train_dataset)
             eval_sampler = torch.utils.data.SequentialSampler(eval_dataset)
         else:
             test_sampler = torch.utils.data.SequentialSampler(test_dataset)
@@ -161,12 +161,18 @@ def main(args):
         print(f"Restore model from {os.path.join(str(MAIN_PATH / args.save_dir), args.resume)}")
         checkpoint = torch.load(os.path.join(str(MAIN_PATH / args.save_dir), args.resume), map_location="cpu")
 
+        # we pre-train seg_det module, without training the rel.
+        # the seg_det module is well trained, then we need just need to fine-tune rel module,
+        # however, since we change the NN architecture in rel module, when load from the pre-trained
+        # seg_det, it will report error that parameters in rel module don't match to the parameter in loaded model.
+        # Since the parameters of rel module are not trained in loaded model, we just don't load it,
+        # once the final model is finalized, we could just delete below code.
         state_dict = model_without_ddp.state_dict()
         for name, param in checkpoint["model"].items():            
             if not name.startswith("rel_generator."):
                 state_dict[name].copy_(param)
-            
         model_without_ddp.load_state_dict(state_dict)
+        ###############################################################################################
         
         # model_without_ddp.load_state_dict(checkpoint["model"])
         # if we freeze the seg_det module, we train the rel module. Actually, we start a new train procedure.
