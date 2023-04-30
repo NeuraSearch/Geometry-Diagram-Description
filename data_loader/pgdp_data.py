@@ -74,7 +74,7 @@ class GEODataset(torch.utils.data.Dataset):
             self.ids.append(key)
             
         if self.cfg.toy_data:
-            self.ids = self.ids[:50]
+            self.ids = self.ids[500:550]
 
     def __getitem__(self, index):
         
@@ -386,7 +386,7 @@ class GEODataset(torch.utils.data.Dataset):
         sym2geo = annot_each["relations"]["sym2geo"]
         sym2sym = annot_each["relations"]["sym2sym"]
         
-        text_symbol_geo_rel, head_symbol_geo_rel = self.get_text_symbol_geo_rel(
+        text_symbol_geo_rel, head_symbol_geo_rel, text_symbol_class, head_symbol_class = self.get_text_symbol_geo_rel(
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
@@ -401,7 +401,7 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=points_num,
+            num=points_num + lines_num,
             sym_type="angle",
         )
         
@@ -409,7 +409,7 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=points_num,
+            num=points_num + lines_num,
             sym_type="double angle",
         )
         
@@ -417,7 +417,7 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=points_num,
+            num=points_num + lines_num,
             sym_type="triple angle",
         )
     
@@ -425,7 +425,7 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=points_num,
+            num=points_num + lines_num,
             sym_type="quad angle",
         )
 
@@ -433,7 +433,7 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=points_num,
+            num=points_num + lines_num,
             sym_type="penta angle",
         )
     
@@ -442,7 +442,7 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=lines_num,
+            num=points_num + lines_num,
             sym_type="bar",
         )
 
@@ -450,7 +450,7 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=lines_num,
+            num=points_num + lines_num,
             sym_type="double bar",
         )
         
@@ -458,7 +458,7 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=lines_num,
+            num=points_num + lines_num,
             sym_type="triple bar",
         )
 
@@ -466,7 +466,7 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=lines_num,
+            num=points_num + lines_num,
             sym_type="quad bar",
         )
 
@@ -498,13 +498,15 @@ class GEODataset(torch.utils.data.Dataset):
             sym_labels=sym_labels,
             sym_ids=sym_ids,
             sym2geo=sym2geo,
-            num=points_num,
+            num=points_num + lines_num,
             sym_type="perpendicular",
         )
         
         return {
             "text_symbol_geo_rel": text_symbol_geo_rel,
             "head_symbol_geo_rel": head_symbol_geo_rel,
+            "text_symbol_class": text_symbol_class,
+            "head_symbol_class": head_symbol_class,
             "angle_symbols_geo_rel": angle_symbols_geo_rel,
             "double_angle_symbols_geo_rel": double_angle_symbols_geo_rel,
             "triple_angle_symbols_geo_rel": angle_symbols_geo_rel,
@@ -530,17 +532,21 @@ class GEODataset(torch.utils.data.Dataset):
         lpl_num = points_num if lines_num != 0 else 0
         plp_num = lines_num if points_num != 0 else 0
         pcp_num = circles_num if points_num != 0 else 0
-        column_len = points_num + lines_num + lpl_num + plp_num + pcp_num
+        # column_len = points_num + lines_num + lpl_num + plp_num + pcp_num
+        column_len = points_num + lines_num + circles_num
         row_len = sym_labels.tolist().count(self.CLASSES_SYM.index("text"))
    
         head_sym_num = 0
         head_symbol_geo_rel = None
+        head_symbol_class = None
         if len(sym2sym) != 0:
             for rel in sym2sym:
                 if len(rel[1]) == 1 and (sym_labels.tolist()[int(rel[1][0][1:])] == self.CLASSES_SYM.index("head")):
                     head_sym_num +=1
             if head_sym_num != 0:
-                head_symbol_geo_rel = torch.zeros((head_sym_num, points_num + lpl_num + plp_num + pcp_num), dtype=torch.long)
+                # head_symbol_geo_rel = torch.zeros((head_sym_num, points_num + lpl_num + plp_num + pcp_num), dtype=torch.long)
+                head_symbol_geo_rel = torch.zeros((head_sym_num, points_num + lines_num + circles_num), dtype=torch.long)
+                head_symbol_class = torch.zeros((head_sym_num, ), dtype=torch.long)
                 column_len += head_sym_num
         
         text_sym_dict = {}
@@ -558,8 +564,10 @@ class GEODataset(torch.utils.data.Dataset):
         
         if row_len != 0 and column_len != 0:
             text_symbol_geo_rel = torch.zeros((row_len, column_len), dtype=torch.long)
+            text_symbol_class = torch.zeros((row_len, ), dtype=torch.long)
         else:
             text_symbol_geo_rel = None
+            text_symbol_class = None
         for rel in sym2geo:
             sym = rel[0]
             geos = rel[1]
@@ -570,7 +578,6 @@ class GEODataset(torch.utils.data.Dataset):
                         text_symbol_geo_rel[text_sym_dict[sym], int(geos[0][1:])] = 1.
                     elif geos[0][1] == "l":
                         offset = points_num
-         
                         text_symbol_geo_rel[text_sym_dict[sym], offset + int(geos[0][1:])] = 1.
                     else:
                         raise ValueError
@@ -579,17 +586,26 @@ class GEODataset(torch.utils.data.Dataset):
                     l_num = sum([1 if geo[0] == "l" else 0 for geo in geos])
                     c_num = sum([1 if geo[0] == "c" else 0 for geo in geos])
                     if l_num == 2 and p_num == 1:   # LPL
-                        offset = points_num + lines_num
+                        # offset = points_num + lines_num
                         p_idx = [int(geo[1:]) for geo in geos if geo[0] == "p"]
-                        text_symbol_geo_rel[text_sym_dict[sym], offset + p_idx[0]] = 1.
-                    elif l_num == 1 and p_num == 2: # PLP
-                        offset = points_num + lines_num + lpl_num
                         l_idx = [int(geo[1:]) for geo in geos if geo[0] == "l"]
-                        text_symbol_geo_rel[text_sym_dict[sym], offset + l_idx[0]] = 1.
+                        text_symbol_geo_rel[text_sym_dict[sym], p_idx[0]] = 1.
+                        text_symbol_geo_rel[text_sym_dict[sym], l_idx] = 1.
+                        text_symbol_class[text_sym_dict[sym]] = 1
+                    elif l_num == 1 and p_num == 2: # PLP
+                        # offset = points_num + lines_num + lpl_num
+                        l_idx = [int(geo[1:]) for geo in geos if geo[0] == "l"]
+                        p_idx = [int(geo[1:]) for geo in geos if geo[0] == "p"]
+                        text_symbol_geo_rel[text_sym_dict[sym], l_idx[0]] = 1.
+                        text_symbol_geo_rel[text_sym_dict[sym], p_idx] = 1.
+                        text_symbol_class[text_sym_dict[sym]] = 2
                     elif c_num == 1 and p_num == 2: # PCP
-                        offset = points_num + lines_num + lpl_num + plp_num
+                        # offset = points_num + lines_num + lpl_num + plp_num
                         c_idx = [int(geo[1:]) for geo in geos if geo[0] == "c"]
-                        text_symbol_geo_rel[text_sym_dict[sym], offset + c_idx[0]] = 1.
+                        p_idx = [int(geo[1:]) for geo in geos if geo[0] == "p"]
+                        text_symbol_geo_rel[text_sym_dict[sym], c_idx[0]] = 1.
+                        text_symbol_geo_rel[text_sym_dict[sym], p_idx] = 1.
+                        text_symbol_class[text_sym_dict[sym]] = 3
                     else:
                         raise ValueError
         
@@ -598,8 +614,10 @@ class GEODataset(torch.utils.data.Dataset):
             for rel in sym2sym:
                 if len(rel[1]) == 1:
                     head_sym = rel[1][0]
-                    offset = points_num + lines_num + lpl_num + plp_num + pcp_num
+                    # offset = points_num + lines_num + lpl_num + plp_num + pcp_num
+                    offset = points_num + lines_num + circles_num
                     text_symbol_geo_rel[text_sym_dict[rel[0]], offset + head_sym_dict[head_sym]] = 1.
+                    text_symbol_class[text_sym_dict[rel[0]]] = 0
                     
                     for rel_sym2geo in sym2geo:
                         if rel_sym2geo[0] == head_sym:
@@ -608,27 +626,36 @@ class GEODataset(torch.utils.data.Dataset):
                             c_num = sum([1 if geo[0] == "c" else 0 for geo in rel_sym2geo[1]])
                             
                             if l_num == 2 and p_num == 1:   # LPL
-                                offset = points_num
+                                # offset = points_num
                                 p_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "p"]
-                                head_symbol_geo_rel[head_sym_dict[head_sym], offset + p_idx[0]] = 1.
-                            elif l_num == 1 and p_num == 2: # PLP
-                                offset = points_num + lpl_num
                                 l_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "l"]
-                                head_symbol_geo_rel[head_sym_dict[head_sym], offset + l_idx[0]] = 1.
-                            elif c_num == 1 and p_num == 2: # PCP
-                                offset = points_num + lpl_num + plp_num
-                                c_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "c"]
-                                head_symbol_geo_rel[head_sym_dict[head_sym], offset + c_idx[0]] = 1.
-                            elif p_num == 1:
-                                offset = 0
+                                head_symbol_geo_rel[head_sym_dict[head_sym], p_idx[0]] = 1.
+                                head_symbol_geo_rel[head_sym_dict[head_sym], l_idx] = 1.
+                                head_symbol_class[head_sym_dict[head_sym]] = 1
+                            elif l_num == 1 and p_num == 2: # PLP
+                                # offset = points_num + lpl_num
+                                l_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "l"]
                                 p_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "p"]
-                                head_symbol_geo_rel[head_sym_dict[head_sym], offset + p_idx[0]] = 1.
+                                head_symbol_geo_rel[head_sym_dict[head_sym], l_idx[0]] = 1.
+                                head_symbol_geo_rel[head_sym_dict[head_sym], p_idx] = 1.
+                                head_symbol_class[head_sym_dict[head_sym]] = 2
+                            elif c_num == 1 and p_num == 2: # PCP
+                                # offset = points_num + lpl_num + plp_num
+                                c_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "c"]
+                                p_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "p"]
+                                head_symbol_geo_rel[head_sym_dict[head_sym], c_idx[0]] = 1.
+                                head_symbol_geo_rel[head_sym_dict[head_sym], p_idx] = 1.
+                                head_symbol_class[head_sym_dict[head_sym]] = 3
+                            elif p_num == 1:
+                                # offset = 0
+                                p_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "p"]
+                                head_symbol_geo_rel[head_sym_dict[head_sym], p_idx[0]] = 1.
                             else:
                                 raise ValueError
                             
                             break
         
-        return text_symbol_geo_rel, head_symbol_geo_rel
+        return text_symbol_geo_rel, head_symbol_geo_rel, text_symbol_class, head_symbol_class
 
     def get_others_symbols_geo_rel(self, sym_labels, sym_ids, sym2geo, num, sym_type):
                 
@@ -647,17 +674,21 @@ class GEODataset(torch.utils.data.Dataset):
             if rel[0] in sym_dict:
                 if "angle" in sym_type:     # LPL
                     p_idx = [int(geo[1:]) for geo in rel[1] if geo[0] == "p"]
+                    l_idx = [int(geo[1:]) for geo in rel[1] if geo[0] == "l"]
                     # print("1p_idx: ", p_idx)
                     # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
                     symbol_geo_rel[sym_dict[rel[0]], p_idx[0]] = 1.
+                    symbol_geo_rel[sym_dict[rel[0]], l_idx] = 1.
                     # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
                     # input()
                 elif "bar" in sym_type:     # PLP
                     l_idx = [int(geo[1:]) for geo in rel[1] if geo[0] == "l"]
+                    p_idx = [int(geo[1:]) for geo in rel[1] if geo[0] == "p"]
                     # print("2l_idx: ", l_idx)
                     # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
                     if len(l_idx) != 0:
                         symbol_geo_rel[sym_dict[rel[0]], l_idx[0]] = 1.
+                        symbol_geo_rel[sym_dict[rel[0]], p_idx] = 1.
                     # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
                     # input()
                 elif "parallel" in sym_type: # l
@@ -670,9 +701,11 @@ class GEODataset(torch.utils.data.Dataset):
                     # input()
                 elif "perpendicular" in sym_type: # LPL
                     p_idx = [int(geo[1:]) for geo in rel[1] if geo[0] == "p"]
+                    l_idx = [int(geo[1:]) for geo in rel[1] if geo[0] == "l"]
                     # print("4l_idx: ", p_idx)
                     # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
                     symbol_geo_rel[sym_dict[rel[0]], p_idx[0]] = 1.
+                    symbol_geo_rel[sym_dict[rel[0]], l_idx] = 1.
                     # print("symbol_geo_rel: ", symbol_geo_rel[sym_dict[rel[0]], ])
                     # input()
                 else:

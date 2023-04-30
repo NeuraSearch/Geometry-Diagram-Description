@@ -69,7 +69,7 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
     """
     Args:
         text_symbols_parse_results: List[ Dict{} ], 
-            each Dict: {"angle": [point, point, ...] or [], "line": [line, line, ...] or []}
+            each Dict: {"angle": [line1, point1, line2] or [], "length": [point1, line1, point2] or []}
         other_symbols_parse_results: List[ Dict{}], each Dict: {"parallel": [line, line, ...]}
     
     Returns:
@@ -136,55 +136,75 @@ def generate_for_text_symbols(per_data_result):
     # angles
     angles_res = []
     angles_info = per_data_result["angle"]
-    for info in angles_info:
-        point = info[0]
-        degree = info[1]
-
-        if type(point) == Point:
+    for angle_triple in angles_info:
+        # angle_triple: [line1, point1, line2, degree]
+        point = angle_triple[1]
+        line_1 = angle_triple[0]
+        line_2 = angle_triple[2]
+        degree = angle_triple[3]
         
+        if type(point) == Point:
             if point.angle_name:
                 angles_res.append(f"Angle {point.angle_name} has degree of {str(degree)}.")
             else:
-                # find two lines for angle
-                angle_name = extract_two_edges_for_point(point)
-                if angle_name != None:
-                    angles_res.append(f"Angle {angle_name[0]}{angle_name[1]}{angle_name[2]} has degree of {str(degree)}.")
-        
+                point_name = point.ref_name
+                if line_1.ref_name and line_2.ref_name:
+                    if point_name:
+                        angles_res.append(f"Line {line_1.ref_name} and Line {line_2.ref_name} cross at Point {point_name} has degree of {str(degree)}.")
+                    else:
+                        angles_res.append(f"The Angle between Line {line_1.ref_name} and Line {line_2.ref_name} has degree of {str(degree)}.")
+                        
         elif type(point) == Circle:
+            circle_name = point.ref_name
+            if len(point.rel_center_points) > 0:
+                center_point = point.rel_center_points[0]
+                
+                if center_point.ref_name:
+                    if line_1.ref_name and line_2.ref_name:
+                        if circle_name:
+                            angles_res.append(f"Line {line_1.ref_name} and Line {line_2.ref_name} cross at the Center Point {center_point.ref_name} of Circle {circle_name} has degree of {str(degree)}.")
+                        else:
+                            angles_res.append(f"Line {line_1.ref_name} and Line {line_2.ref_name} cross at Point {center_point.ref_name} has degree of {str(degree)}.")
             
-            angle_name = extract_angle_from_circle(point)
-            if angle_name != None:
-                angles_res.append(f"Angle {angle_name[0]}{angle_name[1]}{angle_name[2]} has degree of {str(degree)}.")
-        
     # length
     lines_res = []
     lines_info = per_data_result["length"]
-    for info in lines_info:
-        line = info[0]
-        length = info[1]
+    for line_triple in lines_info:
+        # line_triple: [point1, line1, point2, length]
+        line = line_triple[1]
+        point_1 = line_triple[0]
+        point_2 = line_triple[2]
+        length = line_triple[3]
         
         if line.ref_name:
             lines_res.append(f"The length of Line {line.ref_name} is {str(length)}.")
         else:
-            # find two points for the line
-            line_name = extract_two_points_line(line)
-            if line_name != None:
-                lines_res.append(f"The length of Line {line_name[0]}{line_name[1]} is {str(length)}.")
+            if point_1.ref_name and point_2.ref_name:
+                lines_res.append(f"The length of Line {point_1.ref_name}{point_2.ref_name} is {str(length)}.")
     
     return angles_res, lines_res
 
-def generate_for_congruent_angle(points):
+def generate_for_congruent_angle(sym_val):
     
     angles_name = []
     
-    for point in points:
+    for triple in sym_val:
+        # triple: [line1, point1, line2]
+        point = triple[1]
+        line_1 = triple[0]
+        line_2 = triple[2]
+
         if point.angle_name:
             angles_name.append(point.angle_name)
         else:
-            angle = extract_two_edges_for_point(point)
-            if angle != None:
-                angles_name.append(f"{angle[0]}{angle[1]}{angle[2]}")
+            point_name = point.ref_name
+            if line_1.ref_name and line_2.ref_name:
+                if point_name:
+                    angles_name.append(f"between Line {line_1.ref_name} and Line {line_2.ref_name} cross at Point {point_name}")
+                else:
+                    angles_name.append(f"between Line {line_1.ref_name} and Line {line_2.ref_name}")
     
+    print(angles_name)
     if len(angles_name) > 1:
         res = f"Angle {angles_name[0]} has the same degree with "
         for angle in angles_name[1:]:
@@ -196,18 +216,23 @@ def generate_for_congruent_angle(points):
     else:
         return None
 
-def generate_for_congruent_bar(lines):
+def generate_for_congruent_bar(sym_val):
     
     lines_name = []
     
-    for line in lines:
+    for triple in sym_val:
+        # triple: [point1, line1, point2]
+        line = triple[1]
+        point_1 = triple[0]
+        point_2 = triple[2]
+        
         if line.ref_name:
-            lines_name.append(line.ref_name)
+            lines_name.append(f"{line.ref_name}")
         else:
-            line_name = extract_two_points_line(line)
-            if line_name != None:
-                lines_name.append(f"{line_name[0]}{line_name[1]}")
-    
+            if point_1.ref_name and point_2.ref_name:
+                lines_name.append(f"{point_1.ref_name}{point_2.ref_name}")
+
+    print(lines_name)
     if len(lines_name) > 1:
         res = f"Line {lines_name[0]} has the same length with "
         for line in lines_name[1:]:
@@ -219,18 +244,18 @@ def generate_for_congruent_bar(lines):
     else:
         return None
 
-def generate_for_parallel(lines):
+def generate_for_parallel(sym_val):
 
     lines_name = []
     
-    for line in lines:
+    for line_list in sym_val:
+        # line_list: [line]
+        line = line_list[0]
+        
         if line.ref_name:
-            lines_name.append(line.ref_name)
-        else:
-            line_name = extract_two_points_line(line)
-            if line_name != None:
-                lines_name.append(f"{line_name[0]}{line_name[1]}")
+            lines_name.append(f"{line.ref_name}")
     
+    print(lines_name)
     if len(lines_name) > 1:
         res = f"Line {lines_name[0]} is parallel with "
         for line in lines_name[1:]:
@@ -242,116 +267,24 @@ def generate_for_parallel(lines):
     else:
         return None
 
-def generate_for_perpendicular(points):
+def generate_for_perpendicular(sym_val):
     
     res = []
     
-    # each point in points constitutes the perpendicular with lines of its own
-    for point in points:
-        lines = extract_two_edges_for_point(point, force=True)
-        if lines != None:
-            if lines[1] != None:
-                res.append(f"Line {lines[0]} is perpendicular with Line {lines[2]} at Point {lines[1]}.")
+    for triple in sym_val:
+        # triple: [line1, point1, line2]
+        point = triple[1]
+        line_1 = triple[0]
+        line_2 = triple[2]
+
+        point_name = point.ref_name
+        if line_1.ref_name and line_2.ref_name:
+            if point_name:
+                res.append(f"Line {line_1.ref_name} is perpendicular with Line {line_2.ref_name} at Point {point_name}.")
             else:
-                res.append(f"Line {lines[0]} is perpendicular with Line {lines[2]}.")
+                res.append(f"Line {line_1.ref_name} is perpendicular with Line {line_2.ref_name}.")
 
     if len(res) > 0:
         return res
-    else:
-        return None
-    
-def extract_two_edges_for_point(point, force=False):
-    
-    if point.ref_name or force:
-        mid_name = point.ref_name
-        
-        
-        candidates = []
-        # 1. select from lines, where point is their endpoint
-        if len(point.rel_endpoint_lines) > 0:
-            for line in point.rel_endpoint_lines:
-                for l_p in line.rel_endpoint_points:
-                    if l_p.ref_name and l_p != point:
-                        if len(candidates) < 2:
-                            candidates.append(l_p)
-                            break   # each line provide one point
-                
-                if len(candidates) < 1:
-                    for l_p in line.rel_online_points:
-                        if l_p.ref_name and l_p != point:
-                            if len(candidates) < 2:
-                                candidates.append(l_p)
-                                break   # each line provide one point    
-        if len(candidates) >= 2:
-            return [candidates[0].ref_name, mid_name, candidates[1].ref_name]
-        else:
-            # 2. select from lines, where point is their online point
-            if len(point.rel_online_lines) > 0:
-                for line in point.rel_online_lines:
-                    for l_p in line.rel_endpoint_points:
-                        if l_p.ref_name and l_p != point:
-                            if len(candidates) < 2:
-                                candidates.append(l_p)
-                                break   # each line provide one point
-                        
-                    if len(candidates) < 1:
-                        for l_p in line.rel_online_points:
-                            if l_p.ref_name and l_p != point:
-                                if len(candidates) < 2:
-                                    candidates.append(l_p)
-                                    break   # each line provide one point    
-        if len(candidates) >= 2:
-            return [candidates[0].ref_name, mid_name, candidates[1].ref_name]
-        else:
-            return None
-    else:
-        return None
-
-def extract_two_points_line(line):
-    
-    candidates = []
-    for p in line.rel_endpoint_points:
-        if p.ref_name and p not in candidates:
-            candidates.append(p)
-        if len(candidates) == 2:
-            break
-    
-    if len(candidates) >= 2:
-        return [candidates[0].ref_name, candidates[1].ref_name]
-    else:
-        for p in line.rel_online_points:
-            if p.ref_name and p not in candidates:
-                candidates.append(p)
-            if len(candidates) == 2:
-                break
-    
-    if len(candidates) == 2:
-        return [candidates[0].ref_name, candidates[1].ref_name]
-    else:
-        return None
-
-def extract_angle_from_circle(circle):
-    
-    if len(circle.rel_center_points) == 0:
-        return None
-    
-    center_name = None
-    for center in circle.rel_center_points:
-        if center.ref_name:
-            center_name = center.ref_name
-            break
-    
-    if center_name == None:
-        return None
-    
-    other_points = []
-    for point in circle.rel_center_points:
-        if point.ref_name:
-            other_points.append(point.ref_name)
-            if len(other_points) == 2:
-                break
-    
-    if len(other_points) == 2:
-        return [other_points[0].ref_name, center_name, other_points[1].ref_name]
     else:
         return None

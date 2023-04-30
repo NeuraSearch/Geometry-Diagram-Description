@@ -167,14 +167,14 @@ def main(args):
         # # seg_det, it will report error that parameters in rel module don't match to the parameter in loaded model.
         # # Since the parameters of rel module are not trained in loaded model, we just don't load it,
         # # once the final model is finalized, we could just delete below code.
-        # state_dict = model_without_ddp.state_dict()
-        # for name, param in checkpoint["model"].items():            
-        #     if not name.startswith("rel_generator."):
-        #         state_dict[name].copy_(param)
-        # model_without_ddp.load_state_dict(state_dict)
+        state_dict = model_without_ddp.state_dict()
+        for name, param in checkpoint["model"].items():            
+            if not name.startswith("rel_generator."):
+                state_dict[name].copy_(param)
+        model_without_ddp.load_state_dict(state_dict)
         ###############################################################################################
         
-        model_without_ddp.load_state_dict(checkpoint["model"])
+        # model_without_ddp.load_state_dict(checkpoint["model"])
         # if we freeze the seg_det module, we train the rel module. Actually, we start a new train procedure.
         if not args.only_train_rel and args.only_parse: 
             optimizer.load_state_dict(checkpoint["optimizer"])
