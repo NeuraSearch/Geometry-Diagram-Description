@@ -465,7 +465,7 @@ class SymtoGeo(nn.Module):
                 raise ValueError(f"Unknown text_head_symbol_class: {cls}")
             
         # [N, P+L+C+(head), 1]
-        return torch.concat(results, dim=0)
+        return torch.cat(results, dim=0)
         
 
     def cal_sym_geo_rel_loss(self, per_data_sym_to_geo_rel_dict, target):
