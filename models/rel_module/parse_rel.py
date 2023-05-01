@@ -14,7 +14,7 @@ from image_structure import Point, Line, Circle
 
 is_function = lambda x, min, max: min <= x < max
 
-def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
+def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
     """Main function to parse the relations.
 
     Args:
@@ -37,11 +37,20 @@ def parse_rel(geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
     text_symbols_parse_results = []     # [Dict("angle": [] or [Point], "line": [] or [Point]), ...]
     other_symbols_parse_results = []    # [Dict("parallel": [lines, ...]), ...]
     # parse each data
-    for per_geo_rel, per_sym_geo_rel, per_ocr_res in zip(geo_rels, sym_geo_rels, ocr_results):
+    for per_geo_info, per_geo_rel, per_sym_geo_rel, per_ocr_res in zip(all_geo_info, geo_rels, sym_geo_rels, ocr_results):
         
         """ 1. parse points, lines, circles objects, and geo relations. """
-        points, lines, circles = parse_geo_rel_per_data(per_geo_rel)
-        
+        if per_geo_rel != None:
+            points, lines, circles = parse_geo_rel_per_data(per_geo_rel)
+        else:
+            points_num = per_geo_info["points"].size(0) if len(per_geo_info["points"]) != 0 else 0
+            lines_num = per_geo_info["lines"].size(0) if len(per_geo_info["lines"]) != 0 else 0
+            circles_num = per_geo_info["circles"].size(0) if len(per_geo_info["circles"]) != 0 else 0
+
+            points = [Point(ids=i) for i in range(points_num)]
+            lines = [Line(ids=i) for i in range(lines_num)]
+            circles = [Circle(ids=i) for i in range(circles_num)]
+
         if len(points) == 0:
             text_symbols_parse_results.append(None)
             other_symbols_parse_results.append(None)
@@ -185,14 +194,14 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                         if len(res_) > 0:
                             points[which_point_ids].ref_name = res_[0]
                             class_0_cache[idx] = None
-                            break
+                        break
                     elif func["lines"](idx):
                         which_line_ids = idx - geo_start_ids["lines"]
                         res_ = re.findall(r"[a-z]{1}", ocr[i])
                         if len(res_) > 0:
                             lines[which_line_ids].ref_name = res_[0]
                             class_0_cache[idx] = None
-                            break
+                        break
                     elif func["circles"](idx):
                         which_circle_ids = idx - geo_start_ids["circles"]
                         circles[which_circle_ids].ref_name = ocr[i]
@@ -212,7 +221,6 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                         if len(res_) > 0:
                                             points[idx].ref_name = res_
                                             class_0_cache[idx] = None
-                                            break
                         elif this_head_class == 1:  # LPL
                             if len(points) > 0 and len(lines) > 1:
                                 P_max_value_cand, P_max_idx_cand = torch.sort(this_head_rel[0: len(points)], descending=True)
@@ -224,7 +232,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                         selected_point.append(idx)
                                         break
                                 if len(selected_point) == 1:
-                                    for val, idx in zip(L_max_value_cand.tolist(), P_maxL_max_idx_cand_idx_cand.tolist()):
+                                    for val, idx in zip(L_max_value_cand.tolist(), L_max_idx_cand.tolist()):
                                         if val > 0.5:
                                             selected_lines.append(idx)
                                             if len(selected_lines) == 2:
@@ -234,10 +242,11 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                     res = resolve_LPL(ocr[i])
                                     if res[1] == "name":
                                         points[selected_point[0]].angle_name = res[0]
+                                        class_1_P_cache.append(selected_point[0])
                                     elif res[1] == "degree":
                                         parse_res["angle"].append([lines[selected_lines[0]], points[selected_point[0]], lines[selected_lines[1]], res[0]])                                
-                                    class_1_P_cache.append(selected_point[0])
-                                    
+                                        class_1_P_cache[selected_point[0]] = None
+                                  
                         elif this_head_class == 2: # PLP
                             if len(points) > 1 and len(lines) > 0:
                                 P_max_value_cand, P_max_idx_cand = torch.sort(this_head_rel[0: len(points)], descending=True)
@@ -260,7 +269,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                     res = resolve_PLP(ocr[i])
                                     if res != None:
                                         parse_res["length"].append([points[selected_points[0]], lines[selected_line[0]], points[selected_points[1]], res])
-                                        class_2_L_cache.append(selected_line[0])
+                                        class_2_L_cache[selected_line[0]] = None
 
                         elif this_head_class == 3:  # PCP
                             if len(points) > 1 and len(circles) > 0:
@@ -287,6 +296,8 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                         else:
                             raise ValueError(f"Unknown head_symbol class: {this_head_class}")
 
+                        break
+                        
         elif text_sym_class == 1:   # LPL
             if len(points) > 0 and len(lines) > 1:
                 P_max_value_cand, P_max_idx_cand = torch.sort(text_sym_geo_rel[i].squeeze(-1)[0: len(points)], descending=True)
@@ -298,7 +309,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                         selected_point.append(idx)
                         break
                 if len(selected_point) == 1:
-                    for val, idx in zip(L_max_value_cand.tolist(), P_maxL_max_idx_cand_idx_cand.tolist()):
+                    for val, idx in zip(L_max_value_cand.tolist(), L_max_idx_cand.tolist()):
                         if val > 0.5:
                             selected_lines.append(idx)
                             if len(selected_lines) == 2:
@@ -308,10 +319,11 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     res = resolve_LPL(ocr[i])
                     if res[1] == "name":
                         points[selected_point[0]].angle_name = res[0]
+                        class_1_P_cache[selected_point[0]] = None
                     elif res[1] == "degree":
                         parse_res["angle"].append([lines[selected_lines[0]], points[selected_point[0]], lines[selected_lines[1]], res[0]])
-                    class_1_P_cache.append(selected_point[0])
-                
+                        class_1_P_cache[selected_point[0]] = None
+           
         elif text_sym_class == 2:   # PLP
             if len(points) > 1 and len(lines) > 0:
                 P_max_value_cand, P_max_idx_cand = torch.sort(text_sym_geo_rel[i].squeeze(-1)[0: len(points)], descending=True)
@@ -334,7 +346,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     res = resolve_PLP(ocr[i])
                     if res != None:
                         parse_res["length"].append([points[selected_points[0]], lines[selected_line[0]], points[selected_points[1]], res])
-                        class_2_L_cache.append(selected_line[0])
+                        class_2_L_cache[selected_line[0]] = None
 
         elif text_sym_class == 3: # PCP
             if len(points) > 1 and len(circles) > 0:
@@ -423,9 +435,9 @@ def extract_congruent_angle_geo(symbol_geo_rel, points, lines):
     results = []
     if len(points) > 0 and len(lines) > 1:  # LPL
         point_idx_cache = {}
-        selected_point = []
-        selected_lines = []
         for i in range(total_angles):
+            selected_point = []
+            selected_lines = []
             max_P_value_cand, max_P_idx_cand = torch.sort(symbol_geo_rel[i].squeeze(-1)[0:len(points)], descending=True)
             max_L_value_cand, max_L_idx_cand = torch.sort(symbol_geo_rel[i].squeeze(-1)[len(points) : len(points) + len(lines)], descending=True)
             for val, idx in zip(max_P_value_cand.tolist(), max_P_idx_cand.tolist()):
@@ -452,9 +464,9 @@ def extract_congruent_bar_geo(symbol_geo_rel, lines, points):
     results = []
     if len(points) > 1 and len(lines) > 0:  # PLP
         line_idx_cache = {}
-        selected_line = []
-        selected_points = []
         for i in range(total_angles):
+            selected_line = []
+            selected_points = []
             max_P_value_cand, max_P_idx_cand = torch.sort(symbol_geo_rel[i].squeeze(-1)[0:len(points)], descending=True)
             max_L_value_cand, max_L_idx_cand = torch.sort(symbol_geo_rel[i].squeeze(-1)[len(points) : len(points) + len(lines)], descending=True)
             for val, idx in zip(max_L_value_cand.tolist(), max_L_idx_cand.tolist()):
@@ -481,8 +493,8 @@ def extract_parallel_geo(symbol_geo_rel, lines):
     results = []
     if len(lines) > 1:
         line_idx_cache = {}
-        selected_line = []
         for i in range(total_angles):
+            selected_line = []
             max_l_value_cand, max_l_idx_cand = torch.sort(symbol_geo_rel[i].squeeze(-1), descending=True)
             for val, idx in zip(max_l_value_cand.tolist(), max_l_idx_cand.tolist()):
                 if (idx not in line_idx_cache) and (val > 0.5):
@@ -502,9 +514,9 @@ def extract_perperdicular_geo(perpendicular_geo_rel, points, lines):
     results = []
     if len(points) > 0 and len(lines) > 1:  # LPL
         point_idx_cache = {}
-        selected_point = []
-        selected_lines = []
         for i in range(total_sym):
+            selected_point = []
+            selected_lines = []
             max_P_value_cand, max_P_idx_cand = torch.sort(perpendicular_geo_rel[i].squeeze(-1)[0 : len(points)], descending=True)
             max_L_value_cand, max_L_idx_cand = torch.sort(perpendicular_geo_rel[i].squeeze(-1)[len(points) : len(points) + len(lines)], descending=True)
             for val, idx in zip(max_P_value_cand.tolist(), max_P_idx_cand.tolist()):

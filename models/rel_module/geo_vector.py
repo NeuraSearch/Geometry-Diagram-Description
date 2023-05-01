@@ -13,21 +13,14 @@ class GeoVectorHead(nn.Module):
     def __init__(self, inp_channel, out_channel):
         super(GeoVectorHead, self).__init__()
 
-        # head_tower = []
-        # head_tower.append(
-        #     nn.Conv2d(
-        #         in_channels=inp_channel,
-        #         out_channels=out_channel,
-        #         kernel_size=3,
-        #         stride=1,
-        #         padding=1,
-        #         bias=True,
-        #     )
-        # )
-        # head_tower.append(nn.GroupNorm(32, out_channel))
-        # head_tower.append(nn.ReLU())
-        # self.add_module("head_tower", nn.Sequential(*point_head_tower))
+        self.row_embeddings = nn.Embedding(350, inp_channel)
+        self.col_embeddings = nn.Embedding(350, inp_channel)
+        self.register_buffer("row_ids", torch.arange(350))
+        self.register_buffer("col_ids", torch.arange(350))
         
+        self.geo_feature_nn = nn.Linear(inp_channel, out_channel, bias=False)
+        self.geo_feature_ac = nn.ReLU()
+             
         self.geo_embeddings = nn.Embedding(3, out_channel)
     
         self.fuse_nn = nn.Linear(out_channel, out_channel)
@@ -54,11 +47,25 @@ class GeoVectorHead(nn.Module):
            embeddings = self.geo_embeddings(circles_ids)  # [N, geo_embed_size]
         else:
             raise ValueError(f"Unknown geo_type: ({geo_type})")
-            
-        # flatten to [N, geo_embed_size, h*w], then GlobalMaxPooling
-        geo_feat_flatten = feature.flatten(start_dim=2).mean(dim=-1)
+
         
-        return self.fuse(embeddings, geo_feat_flatten)
+        # [N, c, h, w] -> [[N, h, w, c]
+        geo_feature = torch.permute(feature, (0, 2, 3, 1))
+        
+        row = geo_feature.size(1)
+        col = geo_feature.size(2)
+        this_row_embeds = self.row_embeddings(self.row_ids[:row]).unsqueeze(1)   # [row, 1, h]
+        this_col_embeds = self.col_embeddings(self.col_ids[:col]).unsqueeze(0)   # [1, col, h]
+        feature_spatial_embeds = (this_row_embeds + this_col_embeds).unsqueeze(0).repeat(geo_feature.size(0), 1, 1, 1)  # [N, row, col, h]
+        geo_feature += feature_spatial_embeds   # [N, h, w, c]
+        geo_feature = torch.permute(geo_feature, (0, 3, 1, 2))  # [N, c, h, w]
+        
+        # [N, c, h, w] -> [N, c, h * w] -> [N, c]
+        geo_feature = geo_feature.flatten(start_dim=2).mean(dim=-1)
+        geo_feature = self.geo_feature_nn(geo_feature)
+        geo_feature = self.geo_feature_ac(geo_feature)
+        
+        return self.fuse(embeddings, geo_feature)
 
     def fuse(self, embeddings, geo_feat):
         """
@@ -74,7 +81,7 @@ class GeoVectorBuild(nn.Module):
     def __init__(self, cfg):
         super(GeoVectorBuild, self).__init__()
         
-        self.geo_head = GeoVectorHead(inp_channel=64,
+        self.geo_head = GeoVectorHead(inp_channel=cfg.backbone_out_channels,
                                       out_channel=cfg.geo_embed_size)
         
     

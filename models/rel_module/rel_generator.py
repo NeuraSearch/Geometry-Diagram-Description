@@ -112,6 +112,7 @@ class RelGenerator(nn.Module):
             # text_symbols_parse_results: List[ Dict{} ], each Dict: {"angle": [point, point, ...] or [], "line": [line, line, ...] or []}
             # other_symbols_parse_results: List[ Dict{}], each Dict: {"parallel": [line, line, ...]}
             text_symbols_parse_results, other_symbols_parse_results = parse_rel(
+                all_geo_info=all_geo_info,
                 geo_rels=geo_rels_predictions, 
                 sym_geo_rels=sym_geo_rels_predictions, 
                 ocr_results=[data["text_symbols_str"] for data in all_sym_info],

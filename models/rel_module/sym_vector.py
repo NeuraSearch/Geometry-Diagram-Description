@@ -20,33 +20,32 @@ class SymVectorHead(nn.Module):
             out_channels=out_channel,
             kernel_size=kernel_size,
             stride=1,
-            padding=0,
-            bias=True,
+            padding=1,
+            bias=False,
         ))
-        head_tower.append(nn.GroupNorm(32, out_channel))
+        head_tower.append(nn.GroupNorm(8, out_channel))
         head_tower.append(nn.ReLU())
         self.add_module("sym_head_tower", nn.Sequential(*head_tower))
-
-        # self.sym_linear = nn.Sequential(
-        #     nn.Linear(out_channel, out_channel),
-        #     nn.ReLU(),
-        # )
+        
+        self.sym_feat_nn = nn.Linear(out_channel, out_channel)
+        self.sym_feat_ac = nn.ReLU()
             
     def forward(self, feature):
         """
             feature: [N, C, cfg.sym_output_size, cfg.sym_output_size],
                     N is the number of one symbol class.
         """
-        # [b, out_channel, 1, 1]
+        # [b, out_channel, cfg.sym_output_size, cfg.sym_output_size]
         head_out = self.sym_head_tower(feature)
         
+        # [b, out_channel, cfg.sym_output_size * cfg.sym_output_size] -> [b, out_channel]
+        head_out = head_out.flatten(start_dim=2).mean(dim=-1)
+        
         # [b, out_channel]
-        head_out = head_out.flatten(start_dim=1)
+        linear_out = self.sym_feat_nn(head_out)
+        linear_out = self.sym_feat_ac(linear_out)
         
-        # # [b, out_channel]
-        # linear_out = self.sym_linear(head_out)
-        
-        return head_out
+        return linear_out
         
 class SymVectorBuild(nn.Module):
     
@@ -62,7 +61,14 @@ class SymVectorBuild(nn.Module):
         
         self.roi_output_size = cfg.sym_roi_output_size
         self.fpn_strides = cfg.fpn_strides
-            
+        
+        # [1200, 1, h]
+        self.row_embeddings = nn.Parameter(torch.randn(1200, cfg.backbone_out_channels).unsqueeze(1))
+        # [1, 1200, h]
+        self.col_embeddings = nn.Parameter(torch.randn(1200, cfg.backbone_out_channels).unsqueeze(0))
+        # [1200, 1200, h] -> [h, 1200, 1200] -> [1, h, 1200, 1200]
+        self.sym_spatial_embeddings = nn.Parameter(torch.permute(self.row_embeddings + self.col_embeddings, (2, 0, 1)).unsqueeze(0))
+
         self.sym_head = SymVectorHead(
             inp_channel=cfg.backbone_out_channels,
             out_channel=cfg.sym_embed_size,
@@ -133,7 +139,12 @@ class SymVectorBuild(nn.Module):
                 # feature: [1, c, output_size, output_size]
                 feature = roi_align(input=layer_feature_map, boxes=[box], 
                                    output_size=self.roi_output_size,
-                                   spatial_scale=1 / self.fpn_strides[layer_num]) 
+                                   spatial_scale=1 / self.fpn_strides[layer_num])
+                
+                # spatial_feature: [1, c, output_size, output_size]
+                spatial_feature = roi_align(input=self.sym_spatial_embeddings, boxes=[box],
+                                            output_size=self.roi_output_size, spatial_scale=1 / self.fpn_strides[layer_num])
+                feature += spatial_feature
 
                 label = labels[i]
                 if label == 1:      # text_symbol
@@ -236,6 +247,11 @@ class SymVectorBuild(nn.Module):
                 feature = roi_align(input=layer_feature_map, boxes=[box], 
                                    output_size=self.roi_output_size,
                                    spatial_scale=1 / self.fpn_strides[layer_num]) 
+
+                # spatial_feature: [1, c, output_size, output_size]
+                spatial_feature = roi_align(input=self.sym_spatial_embeddings, boxes=[box],
+                                            output_size=self.roi_output_size, spatial_scale=1 / self.fpn_strides[layer_num])
+                feature += spatial_feature
                 
                 label = labels[i]
                 if label == 1:
@@ -316,7 +332,6 @@ class SymVectorBuild(nn.Module):
         return all_symbols_info
 
     def fuse(self, sym_feat, sym_ids):
-        
         symbols_num = sym_feat.size(0)
         symbols_ids = torch.LongTensor([sym_ids]).repeat(symbols_num).to(sym_feat.device)
         

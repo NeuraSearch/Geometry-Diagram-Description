@@ -122,8 +122,8 @@ class GeneralizedRCNN(nn.Module):
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-        # [b, 64, H, W], H, W refer to the P2
-        visemb_features = self.visemb(features_share)
+        # # [b, 64, H, W], H, W refer to the P2
+        # visemb_features = self.visemb(features_share)
   
         if self.training:
             
@@ -133,13 +133,13 @@ class GeneralizedRCNN(nn.Module):
             losses.update(proposal_det_losses)
             # proposal_seg_losses: {"loss_binary_seg", "loss_var", "loss_dist", "loss_mean_reg"}
             losses.update(proposal_seg_losses)
-            
+
             rel_metadata = {"gt_point_mask": gt_mask[0],
                             "gt_line_mask": gt_mask[1],
                             "gt_circle_mask": gt_mask[2],
                             "targets_det": targets_det,
                             "all_labels_to_layer": all_labels_to_layer,
-                            "geo_feature_map": visemb_features,
+                            "geo_feature_map": features[0],
                             "sym_feature_maps": features[1:]}
             
             return losses, rel_metadata
@@ -148,7 +148,7 @@ class GeneralizedRCNN(nn.Module):
             
             rel_metadata = {"proposals_det": proposals_det,
                             "proposals_seg": proposals_seg,
-                            "geo_feature_map": visemb_features,
+                            "geo_feature_map": features[0],
                             "sym_feature_maps": features[1:]}
             
             return rel_metadata
