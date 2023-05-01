@@ -233,58 +233,59 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                 if len(selected_lines) == 2 and len(ocr[i]) > 0:
                                     res = resolve_LPL(ocr[i])
                                     if res[1] == "name":
-                                        points[selected_point[0]].angle_name == res[0]
+                                        points[selected_point[0]].angle_name = res[0]
                                     elif res[1] == "degree":
                                         parse_res["angle"].append([lines[selected_lines[0]], points[selected_point[0]], lines[selected_lines[1]], res[0]])                                
-                            
-                            elif this_head_class == 2: # PLP
-                                if len(points) > 1 and len(lines) > 0:
-                                    P_max_value_cand, P_max_idx_cand = torch.sort(this_head_rel[0: len(points)], descending=True)
-                                    L_max_value_cand, L_max_idx_cand = torch.sort(this_head_rel[len(points):len(points)+len(lines)], descending=True)
-                                    selected_line = []
-                                    selected_points = []
+                                    class_1_P_cache.append(selected_point[0])
                                     
-                                    for val, idx in zip(L_max_value_cand.tolist(), L_max_idx_cand.tolist()):
-                                        if (idx not in class_2_L_cache) and (val > 0.5):
-                                            selected_line.append(idx)
-                                            break
-                                    if len(selected_line) == 1:
-                                        for val, idx in zip(P_max_value_cand.tolist(), P_max_idx_cand.tolist()):
-                                            if val > 0.5:
-                                                selected_points.append(idx)
-                                                if len(selected_points) == 2:
-                                                    break
-                                    
-                                    if len(selected_points) == 2 and len(ocr[i]) > 0:
-                                        res = resolve_PLP(ocr[i])
-                                        if res != None:
-                                            parse_res["length"].append([points[selected_points[0]], lines[selected_line[0]], points[selected_points[1]], res])
-
-                            elif this_head_class == 3:  # PCP
-                                if len(points) > 1 and len(circles) > 0:
-                                    P_max_value_cand, P_max_idx_cand = torch.sort(this_head_rel[0: len(points)], descending=True)
-                                    C_max_value_cand, C_max_idx_cand = torch.sort(this_head_rel[len(points)+len(lines): len(points)+len(lines)+len(circles)], descending=True)
-                                    selected_circle= []
-                                    selected_points = []
-                            
-                                    for val, idx in zip(C_max_value_cand.tolist(), C_max_idx_cand.tolist()):
+                        elif this_head_class == 2: # PLP
+                            if len(points) > 1 and len(lines) > 0:
+                                P_max_value_cand, P_max_idx_cand = torch.sort(this_head_rel[0: len(points)], descending=True)
+                                L_max_value_cand, L_max_idx_cand = torch.sort(this_head_rel[len(points):len(points)+len(lines)], descending=True)
+                                selected_line = []
+                                selected_points = []
+                                
+                                for val, idx in zip(L_max_value_cand.tolist(), L_max_idx_cand.tolist()):
+                                    if (idx not in class_2_L_cache) and (val > 0.5):
+                                        selected_line.append(idx)
+                                        break
+                                if len(selected_line) == 1:
+                                    for val, idx in zip(P_max_value_cand.tolist(), P_max_idx_cand.tolist()):
                                         if val > 0.5:
-                                            selected_circle.append(idx)
-                                    if len(selected_circle) == 1:
-                                        for val, idx in zip(P_max_value_cand.tolist(), P_max_idx_cand.tolist()):
-                                            if val > 0.5:
-                                                selected_points.append(idx)
-                                                if len(selected_points) == 2:
-                                                    break
-                                    
-                                    if len(selected_points) == 2 and len(ocr[i]) > 0:
-                                        res = resolve_PCP(circles, which_circle_ids, ocr_str)
-                                        if res != None:
-                                            parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], selected_points[1], res])
-                                            idx_cache[idx] = None
-                            
-                            else:
-                                raise ValueError(f"Unknown head_symbol class: {this_head_class}")
+                                            selected_points.append(idx)
+                                            if len(selected_points) == 2:
+                                                break
+                                
+                                if len(selected_points) == 2 and len(ocr[i]) > 0:
+                                    res = resolve_PLP(ocr[i])
+                                    if res != None:
+                                        parse_res["length"].append([points[selected_points[0]], lines[selected_line[0]], points[selected_points[1]], res])
+                                        class_2_L_cache.append(selected_line[0])
+
+                        elif this_head_class == 3:  # PCP
+                            if len(points) > 1 and len(circles) > 0:
+                                P_max_value_cand, P_max_idx_cand = torch.sort(this_head_rel[0: len(points)], descending=True)
+                                C_max_value_cand, C_max_idx_cand = torch.sort(this_head_rel[len(points)+len(lines): len(points)+len(lines)+len(circles)], descending=True)
+                                selected_circle= []
+                                selected_points = []
+                        
+                                for val, idx in zip(C_max_value_cand.tolist(), C_max_idx_cand.tolist()):
+                                    if val > 0.5:
+                                        selected_circle.append(idx)
+                                if len(selected_circle) == 1:
+                                    for val, idx in zip(P_max_value_cand.tolist(), P_max_idx_cand.tolist()):
+                                        if val > 0.5:
+                                            selected_points.append(idx)
+                                            if len(selected_points) == 2:
+                                                break
+                                
+                                if len(selected_points) == 2 and len(ocr[i]) > 0:
+                                    res = resolve_PCP(circles, which_circle_ids, ocr_str)
+                                    if res != None:
+                                        parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], selected_points[1], res])
+                        
+                        else:
+                            raise ValueError(f"Unknown head_symbol class: {this_head_class}")
 
         elif text_sym_class == 1:   # LPL
             if len(points) > 0 and len(lines) > 1:
@@ -306,9 +307,10 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                 if len(selected_lines) == 2 and len(ocr[i]) > 0:
                     res = resolve_LPL(ocr[i])
                     if res[1] == "name":
-                        points[selected_point[0]].angle_name == res[0]
+                        points[selected_point[0]].angle_name = res[0]
                     elif res[1] == "degree":
                         parse_res["angle"].append([lines[selected_lines[0]], points[selected_point[0]], lines[selected_lines[1]], res[0]])
+                    class_1_P_cache.append(selected_point[0])
                 
         elif text_sym_class == 2:   # PLP
             if len(points) > 1 and len(lines) > 0:
@@ -332,6 +334,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     res = resolve_PLP(ocr[i])
                     if res != None:
                         parse_res["length"].append([points[selected_points[0]], lines[selected_line[0]], points[selected_points[1]], res])
+                        class_2_L_cache.append(selected_line[0])
 
         elif text_sym_class == 3: # PCP
             if len(points) > 1 and len(circles) > 0:
@@ -354,7 +357,6 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     res = resolve_PCP(circles, which_circle_ids, ocr_str)
                     if res != None:
                         parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], selected_points[1], res])
-                        idx_cache[idx] = None
                             
         else:
             raise ValueError(f"Unknown text_sym_class: {text_sym_class}")
