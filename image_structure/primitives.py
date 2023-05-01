@@ -204,7 +204,6 @@ def generate_for_congruent_angle(sym_val):
                 else:
                     angles_name.append(f"between Line {line_1.ref_name} and Line {line_2.ref_name}")
     
-    print(angles_name)
     if len(angles_name) > 1:
         res = f"Angle {angles_name[0]} has the same degree with "
         for angle in angles_name[1:]:
@@ -232,7 +231,6 @@ def generate_for_congruent_bar(sym_val):
             if point_1.ref_name and point_2.ref_name:
                 lines_name.append(f"{point_1.ref_name}{point_2.ref_name}")
 
-    print(lines_name)
     if len(lines_name) > 1:
         res = f"Line {lines_name[0]} has the same length with "
         for line in lines_name[1:]:
@@ -255,7 +253,6 @@ def generate_for_parallel(sym_val):
         if line.ref_name:
             lines_name.append(f"{line.ref_name}")
     
-    print(lines_name)
     if len(lines_name) > 1:
         res = f"Line {lines_name[0]} is parallel with "
         for line in lines_name[1:]:
