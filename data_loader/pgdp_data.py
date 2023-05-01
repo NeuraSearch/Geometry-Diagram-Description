@@ -74,7 +74,7 @@ class GEODataset(torch.utils.data.Dataset):
             self.ids.append(key)
             
         if self.cfg.toy_data:
-            self.ids = self.ids[500:550]
+            self.ids = self.ids[:50]
 
     def __getitem__(self, index):
         
