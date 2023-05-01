@@ -81,6 +81,8 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
     
     # generate for text_symbols
     for per_data_result in text_symbols_parse_results:
+        if per_data_result == None:
+            continue
         angles_res, lines_res = generate_for_text_symbols(per_data_result)
         
         # print("per_data_result: ", per_data_result)
@@ -96,7 +98,8 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
         
     
     for idx, per_data_result in enumerate(other_symbols_parse_results):
-        
+        if per_data_result == None:
+            continue
         per_data_other_symbol_nl = defaultdict(list)    # value: [] or [str, str, str]
         for sym_key, sym_val in per_data_result.items():
             
