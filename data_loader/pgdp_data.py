@@ -138,7 +138,7 @@ class GEODataset(torch.utils.data.Dataset):
             )
             
         if self.transforms is not None:
-            img, target_det, target_seg, images_not_tensor = self.transforms(img_org, target_det, target_seg, is_train=self.is_train)
+            img, target_det, target_seg, images_not_tensor = self.transforms(img_org, target_det, target_seg, is_train=self.is_train, only_parse=self.cfg.only_parse)
             # # only apply Resize, RandomHorizontalFlip, so that keep [W, H] format, suitable for OCR
             # images_not_tensor = self.transforms.trans_image_no_tensor(img_org)
 

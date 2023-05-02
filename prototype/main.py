@@ -198,20 +198,20 @@ def main(args):
     print("Start training")
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
-        # if args.distributed:
-        #     # In distributed mode, calling the set_epoch() method at the beginning of each epoch 
-        #     # before creating the DataLoader iterator is necessary to make shuffling work properly 
-        #     # across multiple epochs. Otherwise, the same ordering will be always used.
-        #     train_sampler.set_epoch(epoch)
+        if args.distributed:
+            # In distributed mode, calling the set_epoch() method at the beginning of each epoch 
+            # before creating the DataLoader iterator is necessary to make shuffling work properly 
+            # across multiple epochs. Otherwise, the same ordering will be always used.
+            train_sampler.set_epoch(epoch)
         
-        # # mean_loss: gathered loss from all GPU mean.
-        # mean_loss, lr = train_one_epoch(model, optimizer, data_loader_train,
-        #                                 device, epoch, args.print_freq,
-        #                                 warmup=args.warmpup, scaler=scaler, run=run, logger=logger)
+        # mean_loss: gathered loss from all GPU mean.
+        mean_loss, lr = train_one_epoch(model, optimizer, data_loader_train,
+                                        device, epoch, args.print_freq,
+                                        warmup=args.warmpup, scaler=scaler, run=run, logger=logger)
 
-        # # this external lr_scheduler adjusts lr every epoch
-        # # update learning rate, should call lr_scheduler.step() after optimizer.step() in latest version of Pytorch
-        # lr_scheduler.step()
+        # this external lr_scheduler adjusts lr every epoch
+        # update learning rate, should call lr_scheduler.step() after optimizer.step() in latest version of Pytorch
+        lr_scheduler.step()
         
         print(f"[Epoch: {epoch}] starts evaluation ...")
         predictions = evaluate(model, data_loader_eval, device=device, logger=logger)

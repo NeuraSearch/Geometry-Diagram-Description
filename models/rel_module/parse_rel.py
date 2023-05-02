@@ -87,7 +87,7 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
         other_symbols_geos_rel = {}
         for sym, sym_rel in per_sym_geo_rel.items():
             if sym_rel != None:
-                print("sym: ", sym)
+                # print("sym: ", sym)
                 if "angle" in sym:
                     assert sym not in other_symbols_geos_rel
                     res = extract_congruent_angle_geo(sym_rel, points, lines)

@@ -10,10 +10,10 @@ class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
     
-    def __call__(self, image, target_det=None, target_seg=None, is_train=True):
+    def __call__(self, image, target_det=None, target_seg=None, is_train=True, only_parse=True):
         images_not_tensor = None
         for i, t in enumerate(self.transforms):
-            if not is_train:
+            if not is_train or (not only_parse):
                 if isinstance(t, RandomHorizontalFlip):
                     images_not_tensor = image
                     continue

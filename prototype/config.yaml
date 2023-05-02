@@ -11,8 +11,8 @@ main_args:
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/PGDP5K/test"
   aspect_ratio_group_factor: 3
-  train_img_per_batch: 4
-  test_img_per_batch: 4
+  train_img_per_batch: 10
+  test_img_per_batch: 10
   workers: 8
   dist_url: "env://"
   sync_bn: True
@@ -30,8 +30,8 @@ main_args:
   #    True           False    >> fix seg_det, train rel
   #    False          True     >> train seg_det, no rel
   #    False          False    >> normal 
-  only_train_rel: False
-  only_parse: True
+  only_train_rel: True
+  only_parse: False
 optimizer_args:
   optimization_method: "adam"
   momentum: 0.9
