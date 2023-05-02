@@ -350,6 +350,9 @@ class SymVectorBuild(nn.Module):
         # [W, H] -> [w_c, h_c]
         image_crop = image.crop(box[0].tolist())
         
+        # image.save("1.png")
+        # image_crop.save("1_crop.png")
+        # input()
         # [w_c, h_c] -> [h_c, w_c, 3] -> RGB -> BGR
         image_crop_array = np.array(image_crop)[:, :, ::-1]
         

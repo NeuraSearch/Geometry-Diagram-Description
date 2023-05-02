@@ -136,6 +136,8 @@ def evaluate(model, data_loader, device, logger=None):
         
         # print("-"*100)
         
+        # print("images_id: ", batch_data["images_id"])
+        
         images = batch_data["images"]
         images_not_tensor = batch_data["images_not_tensor"]
         

@@ -4,11 +4,11 @@ import re
 from collections import defaultdict
 
 class Point:
-    def __init__(self, ids):
+    def __init__(self, ids, ref_name=None):
         self.ids = ids
         self.ids_name = f"p{ids}"
         
-        self.ref_name = None
+        self.ref_name = ref_name
         self.angle_name = None
         
         self.rel_endpoint_lines = []
@@ -34,11 +34,11 @@ class Point:
         return self.ids == other.ids
 
 class Line:
-    def __init__(self, ids):
+    def __init__(self, ids, ref_name=None):
         self.ids = ids
         self.ids_name = f"l{ids}"
 
-        self.ref_name = None
+        self.ref_name = ref_name
         
         self.rel_endpoint_points = []
         self.rel_online_points = []
@@ -56,11 +56,11 @@ class Line:
         return self.ids == other.ids
 
 class Circle:
-    def __init__(self, ids):
+    def __init__(self, ids, ref_name=None):
         self.ids = ids
         self.ids_name = f"c{ids}"
 
-        self.ref_name = None
+        self.ref_name = ref_name
                 
         self.rel_on_circle_points = []
         self.rel_center_points = []
@@ -82,6 +82,7 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
     # generate for text_symbols
     for per_data_result in text_symbols_parse_results:
         if per_data_result == None:
+            results.append({})
             continue
         angles_res, lines_res = generate_for_text_symbols(per_data_result)
         
@@ -95,14 +96,17 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
         # print("lines_res: ", lines_res)
         
         results.append(per_data_text_symbol_nl)
-        
+    
+    # print("results: ", results)
+    # print("*"*100)
+    # print()
     
     for idx, per_data_result in enumerate(other_symbols_parse_results):
         if per_data_result == None:
             continue
         per_data_other_symbol_nl = defaultdict(list)    # value: [] or [str, str, str]
         for sym_key, sym_val in per_data_result.items():
-            
+            print("sym_key: ", sym_key)
             if "angle" in sym_key:  # congruent angle
                 res = generate_for_congruent_angle(sym_val)
                 if res != None:
@@ -132,6 +136,11 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
         
         results[idx].update(per_data_other_symbol_nl)    
     
+    # print("final results: ", results)
+    # print("-"*100)
+    # print()
+    # input()
+    
     return results
           
 def generate_for_text_symbols(per_data_result):
@@ -147,10 +156,15 @@ def generate_for_text_symbols(per_data_result):
         degree = angle_triple[3]
         
         if type(point) == Point:
+            # print("Name Point: ", Point)
             if point.angle_name:
+                # print("Name Point angle_name: ", point.angle_name)
                 angles_res.append(f"Angle {point.angle_name} has degree of {str(degree)}.")
             else:
                 point_name = point.ref_name
+                # print("Name Point ref_name: ", point.ref_name)
+                # print("Name Point line_1: ", line_1.ref_name)
+                # print("Name Point line_2: ", line_2.ref_name)
                 if line_1.ref_name and line_2.ref_name:
                     if point_name:
                         angles_res.append(f"Line {line_1.ref_name} and Line {line_2.ref_name} cross at Point {point_name} has degree of {str(degree)}.")
@@ -179,9 +193,14 @@ def generate_for_text_symbols(per_data_result):
         point_2 = line_triple[2]
         length = line_triple[3]
         
+        # print("Name Line: ", line)
+        
         if line.ref_name:
+            # print("Name Line line.ref_name: ", line.ref_name)
             lines_res.append(f"The length of Line {line.ref_name} is {str(length)}.")
         else:
+            # print("Name Line point_1.ref_name: ", point_1.ref_name)
+            # print("Name Line point_2.ref_name: ", point_2.ref_name)
             if point_1.ref_name and point_2.ref_name:
                 lines_res.append(f"The length of Line {point_1.ref_name}{point_2.ref_name} is {str(length)}.")
     
@@ -190,17 +209,20 @@ def generate_for_text_symbols(per_data_result):
 def generate_for_congruent_angle(sym_val):
     
     angles_name = []
-    
+    # print("congruent_angle...")
     for triple in sym_val:
         # triple: [line1, point1, line2]
         point = triple[1]
         line_1 = triple[0]
         line_2 = triple[2]
-
         if point.angle_name:
+            # print("congruent_angle point.angle_name: ", point.angle_name)
             angles_name.append(point.angle_name)
         else:
+            # print("congruent_angle point.ref_name: ", point.ref_name)
             point_name = point.ref_name
+            # print("congruent_angle line_1.ref_name: ", line_1.ref_name)
+            # print("congruent_angle line_2.ref_name: ", line_2.ref_name)
             if line_1.ref_name and line_2.ref_name:
                 if point_name:
                     angles_name.append(f"between Line {line_1.ref_name} and Line {line_2.ref_name} cross at Point {point_name}")
@@ -221,7 +243,7 @@ def generate_for_congruent_angle(sym_val):
 def generate_for_congruent_bar(sym_val):
     
     lines_name = []
-    
+    # print("congruent_bar...")
     for triple in sym_val:
         # triple: [point1, line1, point2]
         line = triple[1]
@@ -229,11 +251,14 @@ def generate_for_congruent_bar(sym_val):
         point_2 = triple[2]
         
         if line.ref_name:
+            # print("congruent_bar line.ref_name: ", line.ref_name)
             lines_name.append(f"{line.ref_name}")
         else:
+            # print("congruent_bar point_1.ref_name: ", point_1.ref_name)
+            # print("congruent_bar point_2.ref_name: ", point_2.ref_name)
             if point_1.ref_name and point_2.ref_name:
                 lines_name.append(f"{point_1.ref_name}{point_2.ref_name}")
-
+    # print("lines_name: ", lines_name)
     if len(lines_name) > 1:
         res = f"Line {lines_name[0]} has the same length with "
         for line in lines_name[1:]:
@@ -248,11 +273,11 @@ def generate_for_congruent_bar(sym_val):
 def generate_for_parallel(sym_val):
 
     lines_name = []
-    
+    # print("parallel...")
     for line_list in sym_val:
         # line_list: [line]
         line = line_list[0]
-        
+        # print("parallel line.ref_name: ", line.ref_name)
         if line.ref_name:
             lines_name.append(f"{line.ref_name}")
     
@@ -270,7 +295,7 @@ def generate_for_parallel(sym_val):
 def generate_for_perpendicular(sym_val):
     
     res = []
-    
+    # print("perpendicular...")
     for triple in sym_val:
         # triple: [line1, point1, line2]
         point = triple[1]
@@ -278,7 +303,10 @@ def generate_for_perpendicular(sym_val):
         line_2 = triple[2]
 
         point_name = point.ref_name
+        # print("perpendicular point.ref_name: ", point.ref_name)
         if line_1.ref_name and line_2.ref_name:
+            # print("perpendicular line_1.ref_name: ", line_1.ref_name)
+            # print("perpendicular line_2.ref_name: ", line_2.ref_name)
             if point_name:
                 res.append(f"Line {line_1.ref_name} is perpendicular with Line {line_2.ref_name} at Point {point_name}.")
             else:

@@ -128,7 +128,7 @@ class GEODataset(torch.utils.data.Dataset):
             
             # 3.3 get targets_geo
             targets_geo, (points_num, lines_num, circles_num) = self.get_geo2geo_rel(annot_each, target_seg)
-     
+        
             targets_sym = self.get_sym2geo_rel(
                 annot_each=annot_each,
                 target_det=target_det,
@@ -138,9 +138,9 @@ class GEODataset(torch.utils.data.Dataset):
             )
             
         if self.transforms is not None:
-            img, target_det, target_seg = self.transforms(img_org, target_det, target_seg)
-            # only apply Resize, RandomHorizontalFlip, so that keep [W, H] format, suitable for OCR
-            images_not_tensor = self.transforms.trans_image_no_tensor(img_org)
+            img, target_det, target_seg, images_not_tensor = self.transforms(img_org, target_det, target_seg, is_train=self.is_train)
+            # # only apply Resize, RandomHorizontalFlip, so that keep [W, H] format, suitable for OCR
+            # images_not_tensor = self.transforms.trans_image_no_tensor(img_org)
 
         return img, images_not_tensor, target_det, target_seg, targets_geo, targets_sym, img_id, index
 
