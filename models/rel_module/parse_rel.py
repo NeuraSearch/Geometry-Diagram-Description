@@ -270,7 +270,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                     # print("res: ", res)
                                     if res[1] == "name":
                                         points[selected_point[0]].angle_name = res[0]
-                                        class_1_P_cache.append(selected_point[0])
+                                        class_1_P_cache[selected_point[0]] = None
                                     elif res[1] == "degree":
                                         parse_res["angle"].append([lines[selected_lines[0]], points[selected_point[0]], lines[selected_lines[1]], res[0]])                                
                                         class_1_P_cache[selected_point[0]] = None
@@ -320,10 +320,10 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                                 break
                                 
                                 if len(selected_points) == 2 and len(ocr[i]) > 0:
-                                    res = resolve_PCP(circles, which_circle_ids, ocr_str)
+                                    res = resolve_PCP(circles, which_circle_ids, ocr[i])
                                     # print("res: ", res)
                                     if res != None:
-                                        parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], selected_points[1], res])
+                                        parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], points[selected_points[1]], res])
                         
                         else:
                             raise ValueError(f"Unknown head_symbol class: {this_head_class}")
@@ -409,7 +409,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                 break
                 
                 if len(selected_points) == 2 and len(ocr[i]) > 0:
-                    res = resolve_PCP(circles, which_circle_ids, ocr_str)
+                    res = resolve_PCP(circles, which_circle_ids, ocr[i])
                     # print("res: ", res)
                     if res != None:
                         parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], selected_points[1], res])
