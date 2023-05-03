@@ -47,9 +47,9 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
             lines_num = per_geo_info["lines"].size(0) if len(per_geo_info["lines"]) != 0 else 0
             circles_num = per_geo_info["circles"].size(0) if len(per_geo_info["circles"]) != 0 else 0
 
-            points = [Point(ids=i, ref_name=f"P{i}") for i in range(points_num)]
-            lines = [Line(ids=i, ref_name=f"L{i}") for i in range(lines_num)]
-            circles = [Circle(ids=i, ref_name=f"C{i}") for i in range(circles_num)]
+            points = [Point(ids=i, ref_fake_name=f"P{i}") for i in range(points_num)]
+            lines = [Line(ids=i, ref_fake_name=f"L{i}") for i in range(lines_num)]
+            circles = [Circle(ids=i, ref_fake_name=f"C{i}") for i in range(circles_num)]
 
         if len(points) == 0:
             text_symbols_parse_results.append(None)
@@ -113,7 +113,7 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
     # print()
     # print("-"*100)
     # print()
-    return text_symbols_parse_results, other_symbols_parse_results
+    return text_symbols_parse_results, other_symbols_parse_results, points, lines, circles
       
 def parse_geo_rel_per_data(geo_rel):
     """
@@ -139,8 +139,8 @@ def parse_geo_rel_per_data(geo_rel):
         num_points = pl_rels.size(0)
         num_lines = pl_rels.size(1)
         
-        points = [Point(ids=i, ref_name=f"P{i}") for i in range(num_points)]
-        lines = [Line(ids=i, ref_name=f"L{i}") for i in range(num_lines)]
+        points = [Point(ids=i, ref_fake_name=f"P{i}") for i in range(num_points)]
+        lines = [Line(ids=i, ref_fake_name=f"L{i}") for i in range(num_lines)]
         
         for p in range(num_points):
             for l in range(num_lines):
@@ -160,8 +160,8 @@ def parse_geo_rel_per_data(geo_rel):
         num_circles = pc_rels.size(1)
         
         if len(points) == 0:    # we will reuse points if list already contains points objects
-            points = [Point(ids=i, ref_name=f"P{i}") for i in range(num_points)]
-        circles = [Circle(ids=i, ref_name=f"C{i}") for i in range(num_circles)]
+            points = [Point(ids=i, ref_fake_name=f"P{i}") for i in range(num_points)]
+        circles = [Circle(ids=i, ref_fake_name=f"C{i}") for i in range(num_circles)]
         
         for p in range(num_points):
             for c in range(num_circles):
@@ -207,26 +207,21 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     if func["points"](idx):
                         # print("1_point...")
                         which_point_ids = idx - geo_start_ids["points"]
-                        res_ = re.findall(r"[A-Z]{1}", ocr[i])
-                        # print("res_: ", res_)
-                        if len(res_) > 0:
-                            points[which_point_ids].ref_name = res_[0]
+                        if len(ocr[i]) > 0:
+                            points[which_point_ids].ref_name = ocr[i]
                             class_0_cache[idx] = None
                         break
                     elif func["lines"](idx):
                         # print("2_line...")
                         which_line_ids = idx - geo_start_ids["lines"]
-                        res_ = re.findall(r"[a-z]{1}", ocr[i])
-                        # print("res_: ", res_)
-                        if len(res_) > 0:
-                            lines[which_line_ids].ref_name = res_[0]
+                        if len(ocr[i]) > 0:
+                            lines[which_line_ids].ref_name = ocr[i]
                             class_0_cache[idx] = None
                         break
                     elif func["circles"](idx):
                         # print("3_circle...")
                         which_circle_ids = idx - geo_start_ids["circles"]
                         circles[which_circle_ids].ref_name = ocr[i]
-                        # print(ocr[i])
                         class_0_cache[idx] = None
                         break
                     elif func["head"](idx):
@@ -242,10 +237,8 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                 for val, idx in zip(P_max_value_cand.tolist(), P_max_idx_cand.tolist()):
                                     # print("idx, val: ", idx, val)
                                     if (idx not in class_0_cache) and (val > 0.5):
-                                        res_ = re.findall(r"[A-Z]{1}", ocr[i])
-                                        # print("res_: ", res_)
-                                        if len(res_) > 0:
-                                            points[idx].ref_name = res_
+                                        if len(ocr[i]) > 0:
+                                            points[idx].ref_name = ocr[i]
                                             class_0_cache[idx] = None
                         elif this_head_class == 1:  # LPL
                             # print("4.2_LPL...")
@@ -296,7 +289,6 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                 
                                 if len(selected_points) == 2 and len(ocr[i]) > 0:
                                     res = resolve_PLP(ocr[i])
-                                    # print("res: ", res)
                                     if res != None:
                                         parse_res["length"].append([points[selected_points[0]], lines[selected_line[0]], points[selected_points[1]], res])
                                         class_2_L_cache[selected_line[0]] = None

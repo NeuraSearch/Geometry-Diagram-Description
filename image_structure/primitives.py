@@ -4,22 +4,17 @@ import re
 from collections import defaultdict
 
 class Point:
-    def __init__(self, ids, ref_name=None):
+    def __init__(self, ids, ref_fake_name):
         self.ids = ids
         self.ids_name = f"p{ids}"
         
-        self.ref_name = ref_name
+        self.ref_name = None
+        self.ref_fake_name = ref_fake_name
         self.angle_name = None
         
         self.rel_endpoint_lines = []
         self.rel_online_lines = []
     
-    def __str__(self):
-        if self.ref_name != None:
-            return self.ref_name
-        else:
-            return self.ids_name
-
     @property
     def angle(self):
         if self.angle_name != None:
@@ -33,39 +28,50 @@ class Point:
     def __eq__(self, other):
         return self.ids == other.ids
 
+    def __str__(self):
+        if self.ref_name:
+            return self.ref_name
+        else:
+            return self.ref_fake_name
+
 class Line:
-    def __init__(self, ids, ref_name=None):
+    def __init__(self, ids, ref_fake_name):
         self.ids = ids
         self.ids_name = f"l{ids}"
 
-        self.ref_name = ref_name
+        self.ref_name = None
+        self.ref_fake_name = ref_fake_name
         
         self.rel_endpoint_points = []
         self.rel_online_points = []
     
-    def __str__(self):
-        if self.ref_name != None:
-            return self.ref_name
-        else:
-            if len(self.rel_endpoint_points) > 1:
-                return f"{self.rel_endpoint_points[0]}{self.rel_endpoint_points[-1]}"
-            else:
-                return self.ids_name
-
     def __eq__(self, other):
         return self.ids == other.ids
 
+    def __str__(self):
+        if self.ref_name:
+            return self.ref_name
+        else:
+            return self.ref_fake_name
+
 class Circle:
-    def __init__(self, ids, ref_name=None):
+    def __init__(self, ids, ref_fake_name=None):
         self.ids = ids
         self.ids_name = f"c{ids}"
 
-        self.ref_name = ref_name
+        self.ref_name = None
+        self.ref_fake_name = ref_fake_name
                 
         self.rel_on_circle_points = []
         self.rel_center_points = []
+
+    def __str__(self):
+        if self.ref_name:
+            return self.ref_name
+        else:
+            return self.ref_fake_name
             
-def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_parse_results):
+def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_parse_results, points, lines, circles):
     """
     Args:
         text_symbols_parse_results: List[ Dict{} ], 
@@ -161,27 +167,14 @@ def generate_for_text_symbols(per_data_result):
                 # print("Name Point angle_name: ", point.angle_name)
                 angles_res.append(f"Angle {point.angle_name} has degree of {str(degree)}.")
             else:
-                point_name = point.ref_name
-                # print("Name Point ref_name: ", point.ref_name)
-                # print("Name Point line_1: ", line_1.ref_name)
-                # print("Name Point line_2: ", line_2.ref_name)
-                if line_1.ref_name and line_2.ref_name:
-                    if point_name:
-                        angles_res.append(f"Line {line_1.ref_name} and Line {line_2.ref_name} cross at Point {point_name} has degree of {str(degree)}.")
-                    else:
-                        angles_res.append(f"The Angle between Line {line_1.ref_name} and Line {line_2.ref_name} has degree of {str(degree)}.")
+                angles_res.append(f"Line {line_1} and Line {line_2} cross at Point {point} has degree of {str(degree)}.")
                         
         elif type(point) == Circle:
-            circle_name = point.ref_name
             if len(point.rel_center_points) > 0:
                 center_point = point.rel_center_points[0]
-                
-                if center_point.ref_name:
-                    if line_1.ref_name and line_2.ref_name:
-                        if circle_name:
-                            angles_res.append(f"Line {line_1.ref_name} and Line {line_2.ref_name} cross at the Center Point {center_point.ref_name} of Circle {circle_name} has degree of {str(degree)}.")
-                        else:
-                            angles_res.append(f"Line {line_1.ref_name} and Line {line_2.ref_name} cross at Point {center_point.ref_name} has degree of {str(degree)}.")
+                angles_res.append(f"Line {line_1} and Line {line_2} cross at the Center Point {center_point} of Circle {[point]} has degree of {str(degree)}.")
+            else:
+                angles_res.append(f"Line {line_1} and Line {line_2} cross at the Center Point of Circle {[point]} has degree of {str(degree)}.")
             
     # length
     lines_res = []
@@ -193,16 +186,7 @@ def generate_for_text_symbols(per_data_result):
         point_2 = line_triple[2]
         length = line_triple[3]
         
-        # print("Name Line: ", line)
-        
-        if line.ref_name:
-            # print("Name Line line.ref_name: ", line.ref_name)
-            lines_res.append(f"The length of Line {line.ref_name} is {str(length)}.")
-        else:
-            # print("Name Line point_1.ref_name: ", point_1.ref_name)
-            # print("Name Line point_2.ref_name: ", point_2.ref_name)
-            if point_1.ref_name and point_2.ref_name:
-                lines_res.append(f"The length of Line {point_1.ref_name}{point_2.ref_name} is {str(length)}.")
+        lines_res.append(f"The length of Line {line} between Point {point_1} and Point {point_2} is {str(length)}.")
     
     return angles_res, lines_res
 
@@ -219,15 +203,7 @@ def generate_for_congruent_angle(sym_val):
             # print("congruent_angle point.angle_name: ", point.angle_name)
             angles_name.append(point.angle_name)
         else:
-            # print("congruent_angle point.ref_name: ", point.ref_name)
-            point_name = point.ref_name
-            # print("congruent_angle line_1.ref_name: ", line_1.ref_name)
-            # print("congruent_angle line_2.ref_name: ", line_2.ref_name)
-            if line_1.ref_name and line_2.ref_name:
-                if point_name:
-                    angles_name.append(f"between Line {line_1.ref_name} and Line {line_2.ref_name} cross at Point {point_name}")
-                else:
-                    angles_name.append(f"between Line {line_1.ref_name} and Line {line_2.ref_name}")
+            angles_name.append(f"between Line {line_1} and Line {line_2} cross at Point {point}")
     
     if len(angles_name) > 1:
         res = f"Angle {angles_name[0]} has the same degree with "
@@ -250,14 +226,8 @@ def generate_for_congruent_bar(sym_val):
         point_1 = triple[0]
         point_2 = triple[2]
         
-        if line.ref_name:
-            # print("congruent_bar line.ref_name: ", line.ref_name)
-            lines_name.append(f"{line.ref_name}")
-        else:
-            # print("congruent_bar point_1.ref_name: ", point_1.ref_name)
-            # print("congruent_bar point_2.ref_name: ", point_2.ref_name)
-            if point_1.ref_name and point_2.ref_name:
-                lines_name.append(f"{point_1.ref_name}{point_2.ref_name}")
+        lines_name.append(f"{line} between Point {point_1} and Point {point_2}")
+    
     # print("lines_name: ", lines_name)
     if len(lines_name) > 1:
         res = f"Line {lines_name[0]} has the same length with "
@@ -278,8 +248,7 @@ def generate_for_parallel(sym_val):
         # line_list: [line]
         line = line_list[0]
         # print("parallel line.ref_name: ", line.ref_name)
-        if line.ref_name:
-            lines_name.append(f"{line.ref_name}")
+        lines_name.append(f"{line}")
     
     if len(lines_name) > 1:
         res = f"Line {lines_name[0]} is parallel with "
@@ -302,15 +271,7 @@ def generate_for_perpendicular(sym_val):
         line_1 = triple[0]
         line_2 = triple[2]
 
-        point_name = point.ref_name
-        # print("perpendicular point.ref_name: ", point.ref_name)
-        if line_1.ref_name and line_2.ref_name:
-            # print("perpendicular line_1.ref_name: ", line_1.ref_name)
-            # print("perpendicular line_2.ref_name: ", line_2.ref_name)
-            if point_name:
-                res.append(f"Line {line_1.ref_name} is perpendicular with Line {line_2.ref_name} at Point {point_name}.")
-            else:
-                res.append(f"Line {line_1.ref_name} is perpendicular with Line {line_2.ref_name}.")
+        res.append(f"Line {line_1} is perpendicular with Line {line_2} at Point {point}.")
 
     if len(res) > 0:
         return res

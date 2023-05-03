@@ -1,9 +1,30 @@
 # coding:utf-8
 
+# import os
+# import sys
+# from pathlib import Path
+# MAIN_PATH = Path(__file__).absolute().parent.parent.parent
+# sys.path.insert(0, str(MAIN_PATH))
+
+# import numpy as np
+# from train_utils import draw_objs
+# CLASSES_SYM = [
+#     "__background__", 
+#     "text", 
+#     "perpendicular", "head", "head_len",
+#     "angle","bar","parallel", 
+#     "double angle","double bar","double parallel", 
+#     "triple angle","triple bar","triple parallel",
+#     "quad angle", "quad bar", 
+#     "penta angle", 
+#     "arrow"
+# ]
+
 import torch
 import torch.nn as nn
 from torchvision.ops import roi_align
 
+import re
 import numpy as np
 from collections import defaultdict
 
@@ -257,7 +278,7 @@ class SymVectorBuild(nn.Module):
                 if label == 1:
                     symbols_info["text_symbols"].append(feature)
                     # OCR
-                    symbols_info["text_symbols_str"].append(self.ocr(images[b_id], box))
+                    symbols_info["text_symbols_str"].append(self.ocr(images[b_id], box, f"{b_id}_{i}"))
                 elif label == 2:
                     symbols_info["perpendicular_symbols"].append(feature)
                 elif label == 3:
@@ -328,7 +349,7 @@ class SymVectorBuild(nn.Module):
                     pass
 
             all_symbols_info.append(symbols_info)
-        
+            
         return all_symbols_info
 
     def fuse(self, sym_feat, sym_ids):
@@ -341,7 +362,7 @@ class SymVectorBuild(nn.Module):
         return self.fuse_ac(self.fuse_nn(symbols_embeddings + symbols_feat))
         
 
-    def ocr(self, image, box):
+    def ocr(self, image, box, name):
         # 这里加一个transforms只要resize, RandomHorizontalFlip,
         # 这里img: [W, H], -> 我们在用的时候使用np.array(img)-> [H, W, 3],
         # 然后把通道转一下, np.array(img)[:, :, ::-1]
@@ -350,12 +371,39 @@ class SymVectorBuild(nn.Module):
         # [W, H] -> [w_c, h_c]
         image_crop = image.crop(box[0].tolist())
         
-        # image.save("1.png")
-        # image_crop.save("1_crop.png")
-        # input()
+        # category_index = {str(i): v for i, v in enumerate(CLASSES_SYM)}
+        # bboxes = box.detach().cpu().numpy()  # [N, 4]
+        # labels = [1] # [N]
+        # scores = [1]
+        # images = draw_objs(image, bboxes, labels, scores, category_index=category_index)
+        # image.save(f"{name}.png")
+        # images.save(f"{name}_box.png")
+        # image_crop.save(f"{name}_crop.png")
+        
+        
         # [w_c, h_c] -> [h_c, w_c, 3] -> RGB -> BGR
         image_crop_array = np.array(image_crop)[:, :, ::-1]
         
         ocr_res = self.easyocr.readtext(image_crop_array, detail=0)
         
-        return " ".join(ocr_res)
+        ocr_res = " ".join(ocr_res)
+        ocr_res = self.correct_ocr_res(ocr_res)
+        
+        # print(f"{name}:   {ocr_res}")
+        
+        return ocr_res
+    
+    @staticmethod
+    def correct_ocr_res(ocr_res):
+        ocr_res = re.sub(r"(_|~)", "-", ocr_res)
+        ocr_res = re.sub(r"^0", "", ocr_res)
+        ocr_res = re.sub(r"(\"|S|e)", "", ocr_res)
+        
+        temp = re.findall("\).{1}$", ocr_res)
+        if len(temp) == 1:
+            if len(temp[0]) == 2:
+                temp = ocr_res.replace(temp[0], "")
+                temp += ")"
+                ocr_res = temp
+        
+        return ocr_res.strip()

@@ -103,7 +103,7 @@ def draw_objs(image: Image,
               font: str = 'arial.ttf',
               font_size: int = 24,
               draw_boxes_on_image: bool = True,
-              draw_masks_on_image: bool = True):
+              draw_masks_on_image: bool = False):
     """
     将目标边界框信息，类别信息，mask信息绘制在图片上
     Args:
@@ -136,7 +136,8 @@ def draw_objs(image: Image,
         return image
 
     colors = [ImageColor.getrgb(STANDARD_COLORS[cls % len(STANDARD_COLORS)]) for cls in classes]
-    colors_2 = [ImageColor.getrgb(STANDARD_COLORS[mas % len(STANDARD_COLORS)]) for mas in range(masks.shape[0])]
+    if draw_masks_on_image:
+        colors_2 = [ImageColor.getrgb(STANDARD_COLORS[mas % len(STANDARD_COLORS)]) for mas in range(masks.shape[0])]
     if draw_boxes_on_image:
         # Draw all boxes onto image.
         draw = ImageDraw.Draw(image)
