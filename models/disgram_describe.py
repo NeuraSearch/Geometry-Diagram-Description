@@ -3,7 +3,7 @@
 import os
 import sys
 from pathlib import Path
-MAIN_PATH = Path(__file__).absolute().parent.parent.parent
+MAIN_PATH = Path(__file__).absolute().parent.parent
 sys.path.insert(0, str(MAIN_PATH))
 
 import torch

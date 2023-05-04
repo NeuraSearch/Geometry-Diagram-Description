@@ -1,1 +1,3 @@
 from .disgram_describe import DiagramDescribe
+
+from .solution_module.transformer_decoder import TransformerProgramGenerator

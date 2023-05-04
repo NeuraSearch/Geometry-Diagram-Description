@@ -11,6 +11,7 @@ import torch
 import torch.distributed as dist
 
 from collections import defaultdict, deque
+from transformers.optimization import AdamW
 
 class SmoothedValue(object):
     """Track a series of values and provide access to smoothed values over a
@@ -350,6 +351,23 @@ def build_optmizer(cfg, model):
     elif cfg.optimization_method == "adam":
         optimizer = torch.optim.Adam(params, lr=cfg.lr, betas=(0.9, 0.999), weight_decay=cfg.weight_decay)
 
+    return optimizer
+
+def build_optmizer_for_t5(cfg, model):
+    no_decay = ["bias", "LayerNorm.weight"]
+    optimizer_grouped_parameters = [
+        {
+            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            "weight_decay": 0.01,
+        },
+        {
+            "params": [p for n, p in model.named_parameters() if any (nd in n for nd in no_decay)],
+            "weight_decay": 0.0,
+        }
+    ]
+    
+    optimizer = AdamW(optimizer_grouped_parameters, lr=cfg.t5_lr, eps=cfg.adam_eps)
+        
     return optimizer
 
 def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):
