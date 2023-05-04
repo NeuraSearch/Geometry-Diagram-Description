@@ -375,7 +375,10 @@ def generate_for_perpendicular(sym_val):
         line_1 = triple[0]
         line_2 = triple[2]
 
-        res.append(f"Line {line_1} is perpendicular with Line {line_2} at Point {point}.")
+        if point.ref_name != None:
+            res.append(f"Line {line_1} is perpendicular with Line {line_2} at Point {point}.")
+        else:
+            res.append(f"Line {line_1} is perpendicular with Line {line_2}.")
 
     if len(res) > 0:
         return res
