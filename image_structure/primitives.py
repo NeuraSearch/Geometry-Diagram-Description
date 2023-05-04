@@ -93,6 +93,7 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
            primitives_info["points"] = generate_for_points(per_data_points)
         
         if len(per_data_lines) > 0:
+            print("haha")
             primitives_info["lines"] = generate_for_lines(per_data_lines)
         
         if len(per_data_circles) > 0:
@@ -180,7 +181,6 @@ def generate_for_lines(per_data_lines):
     lines_res = []
     endpoints_res = []
     onlines_res = []    
-    
     for line in per_data_lines:
         endpoints_per_line = []
         onlines_per_line = []
@@ -190,10 +190,14 @@ def generate_for_lines(per_data_lines):
             for point in line.rel_endpoint_points:
                 endpoints_per_line.append(f"Point {point}")
             endpoints_res.append(endpoints_per_line)
+        else:
+            endpoints_res.append([])
         if len(line.rel_online_points) > 0:
             for point in line.rel_online_points:
                 onlines_per_line.append(f"Point {point}")
             onlines_res.append(onlines_per_line)
+        else:
+            onlines_res.append([])
     
     res = "The digram contains "
     for line, endpoints, onlines in zip(lines_res, endpoints_res, onlines_res):
@@ -210,7 +214,7 @@ def generate_for_lines(per_data_lines):
                 temp += f"Point {on}, "
             res += temp
             res += "on the line."
-    
+
     return res
 
 def generate_for_circles(per_data_circles):
@@ -230,9 +234,13 @@ def generate_for_circles(per_data_circles):
             for point in circle.rel_on_circle_points:
                 oncircles_on_circle.append(f"Point {point}")
             oncircles_res.append(oncircles_on_circle)
+        else:
+            oncircles_res.append([])
         if len(circle.rel_center_points) == 1:
             center_on_circle.append(f"Point {circle.rel_center_points[0]}")
             center_res.append(center_on_circle)
+        else:
+            center_res.append([])
     
     res = "The digram contains "
     for circle, oncircles, center in zip(circles_res, oncircles_res, center_res):
