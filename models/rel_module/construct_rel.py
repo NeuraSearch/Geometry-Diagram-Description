@@ -233,7 +233,7 @@ class SymtoGeo(nn.Module):
         
         self.sigmoid_ac = nn.Sigmoid()
         
-        self.bce_with_logits_loss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([30.]))
+        self.bce_with_logits_loss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([10.]))
    
         self.nllloss = nn.NLLLoss()
          
