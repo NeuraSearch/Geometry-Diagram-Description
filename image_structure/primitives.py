@@ -168,13 +168,10 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
 def generate_for_points(per_data_points):
     points_res = []
     
-    for point in per_data_points:
-        points_res.append(f"Point {point}")
-    
     res = "The diagram contains "
-    for point in points_res:
-        res = res + point + ", "
-    
+    for point in per_data_points:
+        res = res + f"Point {point}, "
+        
     return res
 
 def generate_for_lines(per_data_lines):
@@ -185,16 +182,16 @@ def generate_for_lines(per_data_lines):
         endpoints_per_line = []
         onlines_per_line = []
         
-        lines_res.append(f"Line {line}")
+        lines_res.append(line)
         if len(line.rel_endpoint_points) > 0:
             for point in line.rel_endpoint_points:
-                endpoints_per_line.append(f"Point {point}")
+                endpoints_per_line.append(point)
             endpoints_res.append(endpoints_per_line)
         else:
             endpoints_res.append([])
         if len(line.rel_online_points) > 0:
             for point in line.rel_online_points:
-                onlines_per_line.append(f"Point {point}")
+                onlines_per_line.append(point)
             onlines_res.append(onlines_per_line)
         else:
             onlines_res.append([])
@@ -218,9 +215,6 @@ def generate_for_lines(per_data_lines):
     return res
 
 def generate_for_circles(per_data_circles):
-    # self.rel_on_circle_points = []
-    # self.rel_center_points = []
-
     circles_res = []
     oncircles_res = []
     center_res = []    
@@ -229,15 +223,15 @@ def generate_for_circles(per_data_circles):
         oncircles_on_circle = []
         center_on_circle = []
         
-        circles_res.append(f"Circle {circle}")
+        circles_res.append(circle)
         if len(circle.rel_on_circle_points) > 0:
             for point in circle.rel_on_circle_points:
-                oncircles_on_circle.append(f"Point {point}")
+                oncircles_on_circle.append(point)
             oncircles_res.append(oncircles_on_circle)
         else:
             oncircles_res.append([])
         if len(circle.rel_center_points) == 1:
-            center_on_circle.append(f"Point {circle.rel_center_points[0]}")
+            center_on_circle.append(circle.rel_center_points[0])
             center_res.append(center_on_circle)
         else:
             center_res.append([])
