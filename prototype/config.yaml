@@ -87,5 +87,24 @@ rel_args:
   sym_rel_size: 64
   weak_mask: 0.55
   threshold: 0.5
+solution_generation_data_args:
+  t5_train_img_per_batch: 8
+  t5_test_img_per_batch: 8
+  t5_train_img_path: null
+  t5_eval_img_path: null
+  t5_test_img_path: null
+  t5_train_annot_path: null
+  t5_eval_annot_path: null
+  t5_test_annot_path: null
+  t5_train_parse_path: null
+  t5_eval_parse_path: null
+  t5_test_parse_path: null
+  problem_form: "calulation"
+solution_generation_model_args:
+  model_type: "t5-small"
+  beam_size: 1
+  t5_lr: 1e-4
+  adam_eps: 1e-6
 test_args:
   enable_geo_rel: True
+  

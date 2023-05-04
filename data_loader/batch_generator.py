@@ -8,6 +8,7 @@ sys.path.insert(0, str(MAIN_PATH))
 
 from . import transforms as T
 from .pgdp_data import GEODataset
+from .unigeo_data import UniGeoDataset
 
 from train_utils import get_world_size
 from image_structure import to_image_list
@@ -109,6 +110,80 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     
     return train_dataset, eval_dataset, test_dataset
 
+def make_data_loader_for_T5(cfg, is_train=True, is_distributed=False, start_iter=0):
+    num_gpus = get_world_size()
+    if is_train:
+        images_per_batch = cfg.t5_train_img_per_batch
+        assert (
+            images_per_batch % num_gpus == 0
+        ), f"cfg.image_per_batch ({images_per_batch}) must be divisible by the number \
+                of GPUs ({num_gpus}) used."
+            
+        images_per_gpu = images_per_batch // num_gpus
+    else:
+        images_per_batch = cfg.t5_test_img_per_batch
+        assert (
+            images_per_batch % num_gpus == 0
+        ), f"TEST.IMS_PER_BATCH ({images_per_batch}) must be divisible by the number \
+                of GPUs ({num_gpus}) used."
+        images_per_gpu = images_per_batch // num_gpus
+
+    cfg.t5_train_img_per_batch = images_per_gpu
+    cfg.t5_test_img_per_batch = images_per_gpu
+    
+    normalize_transform = T.Normalize(
+        mean=[200.0, 200.0, 200.0],
+        std=[1., 1., 1.],
+        to_bgr255=True
+    )
+    
+    if is_train:
+        min_size = cfg.min_size_train
+        max_size = cfg.max_size_train
+        flip_prob = 0.5
+    else:
+        min_size = cfg.min_size_test
+        max_size = cfg.max_size_test
+        flip_prob = 0.0
+
+    transforms = T.Compose(
+        [
+            T.Resize(min_size, max_size, fpn_strides=cfg.seg_fpn_strides),
+            T.ToTensor(),
+            normalize_transform,
+        ]
+    )
+
+    train_dataset = None
+    eval_dataset = None
+    test_dataset = None
+    if is_train:
+        train_dataset = UniGeoDataset(
+            root=cfg.t5_train_img_path,
+            ann_file=cfg.t5_train_annot_path,
+            parse_file=cfg.t5_train_parse_path,
+            transforms=transforms,
+            is_train=True,
+            cfg=cfg,
+        )
+        eval_dataset = UniGeoDataset(
+            root=cfg.t5_eval_img_path,
+            ann_file=cfg.t5_eval_annot_path,
+            parse_file=cfg.t5_eval_parse_path,
+            transforms=transforms,
+            is_train=False,
+            cfg=cfg,
+        )
+    else:
+        eval_dataset = UniGeoDataset(
+            root=cfg.t5_test_img_path,
+            ann_file=cfg.t5_test_annot_path,
+            parse_file=cfg.t5_test_parse_path,
+            transforms=transforms,
+            is_train=False,
+            cfg=cfg,
+        )
+
 def geo_data_collate_fn(datas_list):
     batch = list(zip(*datas_list))
     
@@ -128,4 +203,45 @@ def geo_data_collate_fn(datas_list):
         "targets_geo": targets_geo,
         "targets_sym":targets_sym,
         "images_id": images_id,
+    }
+    
+def unigeo_data_collate_fn(data_list, tokenizer):
+    batch = list(zip(*data_list))
+    
+    images = to_image_list(batch[6], batch[6])
+    problems_types = list(batch[0])
+    problem = list(batch[1])
+    program = list(batch[2])
+    numbers = list(batch[3])
+    choice_numbers = list(batch[4])
+    label = list(batch[5])
+    images_id = list(batch[7])
+    
+    tokenized_problem = tokenizer(
+        problem,
+        padding="longest",
+        max_length=512,
+        truncation=True,
+        return_tensors="pt",
+    )
+    tokenized_program = tokenizer(
+        program,
+        padding="longest",
+        max_length=512,
+        truncation=True,
+        return_tensors="pt",    
+    )
+    
+    return {
+        "images": images,
+        "images_id": images_id,
+        "problems_types": problems_types,
+        "problem": problem,
+        "program": program,
+        "numbers": numbers,
+        "choice_numbers": choice_numbers,
+        "label": label,
+        "input_ids": tokenized_problem.input_ids,
+        "attention_mask": tokenized_problem.attention_mask,
+        "target_ids": tokenized_program.input_ids,
     }
