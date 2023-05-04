@@ -13,24 +13,18 @@ import torch
 import wandb
 import datetime
 import numpy as np
+from functools import partial
+from transformers import T5Tokenizer
+from transformers.optimization import get_linear_schedule_with_warmup
 
-from models import DiagramDescribe
-from train_utils import init_distributed_mode, create_aspect_ratio_groups, \
+from models import TransformerProgramGenerator
+from train_utils import init_distributed_mode, \
         GroupBatchSampler, \
-            train_one_epoch, evaluate, \
+            train_one_epoch_program, evaluate_program, \
                 save_on_master, set_environment, \
-                    is_main_process, build_optmizer, create_logger, \
+                    is_main_process, build_optmizer_for_t5, create_logger, \
                         load_from_url
-from data_loader import make_data_loader, geo_data_collate_fn
-
-class ToyModel(torch.nn.Module):
-    def __init__(self):
-        super(ToyModel, self).__init__()
-        
-        self.linear = torch.nn.Linear(10, 20)
-    
-    def forward(self, x):
-        return self.linear(x)
+from data_loader import make_data_loader_for_T5, unigeo_data_collate_fn
 
 def main(args):
     # setup multiple GPUs training
@@ -57,6 +51,12 @@ def main(args):
         logger = create_logger(log_dir=save_dir)
     else:
         logger = None
+
+    # create logger
+    if is_main_process():
+        logger = create_logger(log_dir=save_dir)
+    else:
+        logger = None
     
     # don't worry about the "print()", it has been force to work on the main rank
     # by "setup_for_distributed()" after calling "init_distributed_mode()" above
@@ -74,8 +74,8 @@ def main(args):
     # create dataset
     print("Loading data")
     # we might update args.train_img_per_batch, args.test_img_per_batch
-    train_dataset, eval_dataset, test_dataset = make_data_loader(args, is_train=args.is_train)
-    
+    train_dataset, eval_dataset, test_dataset = make_data_loader_for_T5(args, is_train=args.is_train)
+
     # create sampler
     print("Creating data loaders")
     if args.distributed:
@@ -91,37 +91,34 @@ def main(args):
             eval_sampler = torch.utils.data.SequentialSampler(eval_dataset)
         else:
             test_sampler = torch.utils.data.SequentialSampler(test_dataset)
-    
+
     # create batch sampler
     if args.is_train:
-        if args.aspect_ratio_group_factor >= 0:
-            # category indices of images into different bins according to W/H
-            group_ids = create_aspect_ratio_groups(train_dataset, k=args.aspect_ratio_group_factor)
-            train_batch_sampler = GroupBatchSampler(train_sampler, group_ids, args.train_img_per_batch)
-        else:
-            train_batch_sampler = torch.utils.data.BatchSampler(
-                train_sampler, args.train_img_per_batch, drop_last=True)
-    
+        train_batch_sampler = torch.utils.data.BatchSampler(
+            train_sampler, args.t5_train_img_per_batch, drop_last=True)
+
+    tokenizer = T5Tokenizer.from_pretrained(args.model_type)
+    unigeo_data_collate_fn_func = partial(unigeo_data_collate_fn, model_type=tokenizer)
     if args.is_train:
         # create data loader
         data_loader_train = torch.utils.data.DataLoader(
             train_dataset, batch_sampler=train_batch_sampler, num_workers=args.workers,
-            collate_fn=geo_data_collate_fn)
+            collate_fn=unigeo_data_collate_fn_func)
         data_loader_eval = torch.utils.data.DataLoader(
-            eval_dataset, batch_size=args.test_img_per_batch, 
+            eval_dataset, batch_size=args.t5_test_img_per_batch, 
             sampler=eval_sampler, num_workers=args.workers,
-            collate_fn=geo_data_collate_fn)
+            collate_fn=unigeo_data_collate_fn_func)
     else:
         # NOTE: Actually, Since test dataset is sample sequentially,
         #   we don't need to create sampler for it. Instead, we set batch_size=N, shffule=False
         data_loader_test = torch.utils.data.DataLoader(
             test_dataset, batch_size=1,
             sampler=test_sampler, num_workers=args.workers,
-            collate_fn=geo_data_collate_fn)
-    
+            collate_fn=unigeo_data_collate_fn_func)
+
     # create model
     print("creating model")
-    model = DiagramDescribe(args)
+    model = TransformerProgramGenerator(args)
     # model = ToyModel()
     model.to(device)
     print("finsih creating model")
@@ -129,7 +126,7 @@ def main(args):
     # multiple GPU mode, we need to convert the bn to sync_BN
     if args.distributed and args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-    
+
     print("detect whether wrap model to DDP")
     # make model ddp
     model_without_ddp = model
@@ -141,86 +138,45 @@ def main(args):
     
     if is_main_process() and run != None:
         run.watch(model)
-    
+
     # build optimizer, specified the weight_decay for bias
-    optimizer = build_optmizer(args, model)
+    optimizer = build_optmizer_for_t5(args, model)
     
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
     
-    # build lr_scheduler
-    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_step_size, gamma=args.lr_gamma)
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
-    
-    # load backbone weights
-    assert args.backbone_weights != None
-    load_from_url(model_without_ddp, args.backbone_weights)
+    lr_scheduler = get_linear_schedule_with_warmup(optimizer, 1000, args.epoch * len(data_loader_train) // args.t5_train_img_per_batch)
     
     args.start_epoch = 0
     if args.resume:
         print(f"Restore model from {os.path.join(str(MAIN_PATH / args.save_dir), args.resume)}")
         checkpoint = torch.load(os.path.join(str(MAIN_PATH / args.save_dir), args.resume), map_location="cpu")
-
-        # # we pre-train seg_det module, without training the rel.
-        # # the seg_det module is well trained, then we need just need to fine-tune rel module,
-        # # however, since we change the NN architecture in rel module, when load from the pre-trained
-        # # seg_det, it will report error that parameters in rel module don't match to the parameter in loaded model.
-        # # Since the parameters of rel module are not trained in loaded model, we just don't load it,
-        # # once the final model is finalized, we could just delete below code.
-        state_dict = model_without_ddp.state_dict()
-        for name, param in checkpoint["model"].items():            
-            if not name.startswith("rel_generator."):
-                state_dict[name].copy_(param)
-        model_without_ddp.load_state_dict(state_dict)
-        ###############################################################################################
-        
-        # model_without_ddp.load_state_dict(checkpoint["model"])
-        # if we freeze the seg_det module, we train the rel module. Actually, we start a new train procedure.
-        # if not args.only_train_rel and args.only_parse: 
-        #     optimizer.load_state_dict(checkpoint["optimizer"])
-        #     lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
-        #     args.start_epoch = checkpoint["epoch"] + 1
-        #     if args.amp and "scaler" in checkpoint:
-        #         scaler.load_state_dict(checkpoint["scaler"])
-
-    if not args.is_train:
-        predictions = evaluate(model, data_loader_test, device=device, logger=logger)
-        os.makedirs(save_dir, exist_ok=True)
-        save_file_name = f"not_train_{results_file}.json"
-        with codecs.open(save_file_name, "w", "utf-8") as file:
-            json.dump(predictions, file, indent=2)
-        return
+                
+        model_without_ddp.load_state_dict(checkpoint["model"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+        args.start_epoch = checkpoint["epoch"] + 1
+        if args.amp and "scaler" in checkpoint:
+            scaler.load_state_dict(checkpoint["scaler"])
 
     train_loss = []
     learning_rate = []
-    # TODO: 定义一些我们自己的metric记录列表
     
     print("Start training")
     start_time = time.time()
+    
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
-            # In distributed mode, calling the set_epoch() method at the beginning of each epoch 
-            # before creating the DataLoader iterator is necessary to make shuffling work properly 
-            # across multiple epochs. Otherwise, the same ordering will be always used.
             train_sampler.set_epoch(epoch)
         
-        # mean_loss: gathered loss from all GPU mean.
-        mean_loss, lr = train_one_epoch(model, optimizer, data_loader_train,
-                                        device, epoch, args.print_freq,
+        mean_loss, lr = train_one_epoch_program(model, optimizer, data_loader_train,
+                                        device, epoch, lr_scheduler, args.print_freq,
                                         warmup=args.warmpup, scaler=scaler, run=run, logger=logger)
-
-        # this external lr_scheduler adjusts lr every epoch
-        # update learning rate, should call lr_scheduler.step() after optimizer.step() in latest version of Pytorch
-        lr_scheduler.step()
-        
+    
         print(f"[Epoch: {epoch}] starts evaluation ...")
-        predictions = evaluate(model, data_loader_eval, device=device, logger=logger)
+        predictions = evaluate_program(model, data_loader_eval, device=device, tokenizer=tokenizer, cfg=args, save_dir=save_dir, epoch=epoch, logger=logger)
         
         # only write in the main rank
         if args.rank in [-1, 0]:
-            train_loss.append(mean_loss.item())
-            learning_rate.append(lr)
-            # TODO: 自建metric_list加入
-            
             os.makedirs(save_dir, exist_ok=True)
             save_file_name = f"{epoch}_{results_file}.json"
             with codecs.open(os.path.join(save_dir, save_file_name), "w", "utf-8") as file:
@@ -236,16 +192,10 @@ def main(args):
                 save_files["scaler"] = scaler.state_dict()
             save_on_master(save_files,
                            os.path.join(save_dir, f"model_{epoch}.pth"))
-    
+
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print(f"Training time {total_time_str}")
-    
-    if args.rank in [-1, 0] and args.plot:
-        if len(train_loss) != 0 and len(learning_rate) != 0:
-            # TODO: plot something, the plot_curve has bug !!!.
-            pass
-        pass
 
 if __name__ == "__main__":
     import argparse

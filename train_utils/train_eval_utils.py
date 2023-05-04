@@ -7,6 +7,7 @@ import math
 import torch
 
 from .distributed_utils import MetricLogger, SmoothedValue, is_main_process, warmup_lr_scheduler, reduce_dict, all_gather
+from .geo_evaluation import GeoEvaluation
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
                     print_freq=50, warmup=False, scaler=None, run=None, logger=None):
@@ -193,3 +194,127 @@ def evaluate(model, data_loader, device, logger=None):
     
     # TODO: 返回预测结果
     return
+
+def train_one_epoch_program(model, optimizer, data_loader, device, epoch, lr_scheduler,
+                            print_freq=50, scaler=None, run=None, logger=None):
+    model.train()
+    metric_logger = MetricLogger(delimiter="  ", logger=logger)
+    metric_logger.add_meter("lr", SmoothedValue(window_size=1, fmt="{value:.6f}"))
+    header = f"Epoch: [{epoch}]"
+    
+    mloss = torch.zeros(1).to(device)
+    for i, batch_data in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+        input_ids = batch_data["input_ids"].to(device)
+        attention_mask = batch_data["attention_mask"].to(device)
+        target_ids = batch_data["target_ids"].to(device)
+
+        # mixed-precision train, no action taken in CPU
+        with torch.cuda.amp.autocast(enabled=scaler is not None):
+            # loss_dict.keys:
+            #   "loss_cls", "loss_reg", "loss_centerness", "loss_binary_seg", "loss_var", "loss_dist", "loss_mean_reg"
+            #   {"pl_loss": Tensor, "pc_loss": Tensor,
+            #    "text_symbol_geo_rel_loss", "head_symbol_geo_rel_loss",
+            #    "angle_symbols_geo_rel_loss", "bar_symbols_geo_rel_loss",
+            #    "parallel_symbols_geo_rel_loss", "perpendicular_symbols_geo_rel_loss"}
+            loss_dict = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                target_ids=target_ids,
+            )
+            
+            losses = sum(loss for loss in loss_dict.values())
+        
+        # reduce losses over all GPUs for logging purpose
+        loss_dict_reduced = reduce_dict(loss_dict)
+        loss_reduced = sum(loss for loss in loss_dict_reduced.values())
+
+        loss_value = loss_reduced.item()
+        # mloss * i: total loss of previous steps
+        mloss = (mloss * i + loss_value) / (i + 1)
+
+        if not math.isfinite(loss_value):
+            print(f"Loss is {loss_value}, stop training")
+            print(loss_dict_reduced)
+            sys.exit(1)
+
+        optimizer.zero_grad()
+        if scaler is not None:
+            scaler.scale(losses).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            losses.backward()
+            optimizer.step()
+        
+        lr_scheduler.step()
+
+        # **loss_dict_reduced means we pass all the loss value as key=val mode.
+        metric_logger.update(loss=loss_reduced, **loss_dict_reduced)
+        now_lr = optimizer.param_groups[0]["lr"]
+        metric_logger.update(lr=now_lr)
+    
+        # wandb is not None only on rank0
+        if run != None:
+            run.log({"loss_reduced": loss_reduced})
+            run.log(loss_dict_reduced)
+    
+    return mloss, now_lr
+
+@torch.no_grad()
+def evaluate_program(model, data_loader, device, tokenizer, cfg, save_dir, epoch=None, logger=None):
+    cpu_device = torch.device("cpu")
+    model.eval()
+    metric_logger = MetricLogger(delimiter="  ", logger=logger)
+    header = "Test: "
+    
+    geo_evaluator = GeoEvaluation()
+    predictions = {}
+    for batch_data in metric_logger.log_every(data_loader, 10, header):
+        input_ids = batch_data["input_ids"].to(device)
+        attention_mask = batch_data["attention_mask"].to(device)
+        
+        if device != torch.device("cpu"):
+            torch.cuda.synchronize(device)
+        model_time = time.time()
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        
+        outputs_program = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+                
+        images_id = batch_data["images_id"]
+        for i, id_ in enumerate(images_id):
+            assert id_ not in predictions
+            predictions[id_] = {
+                "problems_types": batch_data["problems_types"],
+                "problem": batch_data["problem"],
+                "golden_program": batch_data["program"],
+                "predict_program": outputs_program[i*cfg.beam_size : (i+1)*cfg.beam_size],
+                "numbers": batch_data["numbers"],
+                "choice_numbers": batch_data["choice_numbers"],
+                "label": batch_data["label"],
+            }
+        
+        geo_evaluator.geo_evaluation(
+            num_beam=cfg.beam_size,
+            batch_data=batch_data,
+            images_id=images_id,
+            target=batch_data["program"],
+            source_nums=batch_data["numbers"],
+            choice_nums=batch_data["choice_numbers"],
+            problem_form=[cfg.problem_form for _ in range(len(images_id))],
+            problem_type=batch_data["problems_types"],
+            metric_logger=metric_logger,
+        )
+        
+        if device != torch.device("cpu"):
+            torch.cuda.synchronize(device)
+        
+        model_time = time.time() - model_time
+        metric_logger.update(model_time=model_time)
+    
+    metric_logger.synchronize_between_processes()
+    print("Averaged stats: ", metric_logger)
+    
+    if is_main_process():
+        geo_evaluator.save(save_dir, epoch)
+    
+    return predictions
