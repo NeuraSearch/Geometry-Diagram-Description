@@ -1,6 +1,6 @@
 main_args:
   is_train: True
-  project_name: "v1.9_train_rel"
+  project_name: "v2.0_train_rel"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
   resume: "archie_west_best/best.pth"
   save_dir: "checkpoints"
@@ -11,8 +11,8 @@ main_args:
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/PGDP5K/test"
   aspect_ratio_group_factor: 3
-  train_img_per_batch: 20
-  test_img_per_batch: 20
+  train_img_per_batch: 6
+  test_img_per_batch: 6
   workers: 8
   dist_url: "env://"
   sync_bn: True

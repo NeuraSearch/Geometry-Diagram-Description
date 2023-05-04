@@ -83,10 +83,25 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
             and keys: "congruent_angle", "congruent_line", "parallel", "perpendicular", values: [str, str, ...] or []
     """
     
-    results = []    # List[ Dict{}, Dict{}, ...]         
+    results = []    # List[ Dict{}, Dict{}, ...]
+    
+    # describe the image in our own language
+    for per_data_points, per_data_lines, per_data_circles in zip(points, lines, circles):
+        primitives_info = {}
+        
+        if len(per_data_points) > 0:
+           primitives_info["points"] = generate_for_points(per_data_points)
+        
+        if len(per_data_lines) > 0:
+            primitives_info["lines"] = generate_for_lines(per_data_lines)
+        
+        if len(per_data_circles) > 0:
+            primitives_info["circles"] = generate_for_circles(per_data_circles)
+        
+        results.append(primitives_info)
     
     # generate for text_symbols
-    for per_data_result in text_symbols_parse_results:
+    for idx, per_data_result in enumerate(text_symbols_parse_results):
         if per_data_result == None:
             results.append({})
             continue
@@ -101,7 +116,7 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
         # print("angles_res: ", angles_res)
         # print("lines_res: ", lines_res)
         
-        results.append(per_data_text_symbol_nl)
+        results[idx].update(per_data_text_symbol_nl)
     
     # print("results: ", results)
     # print("*"*100)
@@ -148,7 +163,94 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
     # input()
     
     return results
-          
+
+def generate_for_points(per_data_points):
+    points_res = []
+    
+    for point in per_data_points:
+        points_res.append(f"Point {point}")
+    
+    res = "The diagram contains "
+    for point in points_res:
+        res = res + point + ", "
+    
+    return res
+
+def generate_for_lines(per_data_lines):
+    lines_res = []
+    endpoints_res = []
+    onlines_res = []    
+    
+    for line in per_data_lines:
+        endpoints_per_line = []
+        onlines_per_line = []
+        
+        lines_res.append(f"Line {line}")
+        if len(line.rel_endpoint_points) > 0:
+            for point in line.rel_endpoint_points:
+                endpoints_per_line.append(f"Point {point}")
+            endpoints_res.append(endpoints_per_line)
+        if len(line.rel_online_points) > 0:
+            for point in line.rel_online_points:
+                onlines_per_line.append(f"Point {point}")
+            onlines_res.append(onlines_per_line)
+    
+    res = "The digram contains "
+    for line, endpoints, onlines in zip(lines_res, endpoints_res, onlines_res):
+        res += f"Line {line}, "
+        
+        if len(endpoints) > 0:
+            temp = "which has endpoints: "
+            for end in endpoints:
+                temp += f"Point {end}, "
+            res += temp
+        elif len(onlines) > 0:
+            temp = "In addition, there are "
+            for on in onlines:
+                temp += f"Point {on}, "
+            res += temp
+            res += "on the line."
+    
+    return res
+
+def generate_for_circles(per_data_circles):
+    # self.rel_on_circle_points = []
+    # self.rel_center_points = []
+
+    circles_res = []
+    oncircles_res = []
+    center_res = []    
+    
+    for circle in per_data_circles:
+        oncircles_on_circle = []
+        center_on_circle = []
+        
+        circles_res.append(f"Circle {circle}")
+        if len(circle.rel_on_circle_points) > 0:
+            for point in circle.rel_on_circle_points:
+                oncircles_on_circle.append(f"Point {point}")
+            oncircles_res.append(oncircles_on_circle)
+        if len(circle.rel_center_points) == 1:
+            center_on_circle.append(f"Point {circle.rel_center_points[0]}")
+            center_res.append(center_on_circle)
+    
+    res = "The digram contains "
+    for circle, oncircles, center in zip(circles_res, oncircles_res, center_res):
+        res += f"Circle {circle}, "
+
+        if len(center) == 1:
+            temp = f"whose center point is {center[0]}, "
+            res += temp
+        
+        if len(oncircles) > 0:
+            temp = "which has "
+            for on in oncircles:
+                temp += f"Point {on}, "
+            res += temp
+            res += "on its arc."
+    
+    return res
+
 def generate_for_text_symbols(per_data_result):
     
     # angles

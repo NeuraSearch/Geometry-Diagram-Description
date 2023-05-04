@@ -181,11 +181,24 @@ class SymtoGeo(nn.Module):
             nn.ReLU(),
             nn.Linear(sym_rel_size, 1),
         )
+        
+        self.text_symbol_geo_transform_layer = nn.Sequential(
+            nn.Linear(sym_rel_size, sym_rel_size),
+            nn.ReLU(),
+        )
+        self.head_symbol_geo_transform_layer = nn.Sequential(
+            nn.Linear(sym_rel_size, sym_rel_size),
+            nn.ReLU(),
+        )
     
         self.angle_symbol_to_geo_layer = nn.Sequential(
             nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
             nn.Linear(sym_rel_size, 1),       
+        )
+        self.angle_symbol_geo_transform_layer = nn.Sequential(
+            nn.Linear(sym_rel_size, sym_rel_size),
+            nn.ReLU(),
         )
     
         self.bar_symbol_to_geo_layer = nn.Sequential(
@@ -193,11 +206,19 @@ class SymtoGeo(nn.Module):
             nn.ReLU(),
             nn.Linear(sym_rel_size, 1),
         )
+        self.bar_symbol_geo_transform_layer = nn.Sequential(
+            nn.Linear(sym_rel_size, sym_rel_size),
+            nn.ReLU(),
+        )
     
         self.parallel_symbol_to_geo_layer = nn.Sequential(
             nn.Linear(sym_rel_size, sym_rel_size),
             nn.ReLU(),
             nn.Linear(sym_rel_size, 1),
+        )
+        self.parallel_symbol_geo_transform_layer = nn.Sequential(
+            nn.Linear(sym_rel_size, sym_rel_size),
+            nn.ReLU(),
         )
         
         self.perpendicular_symbol_to_geo_layer = nn.Sequential(
@@ -205,10 +226,14 @@ class SymtoGeo(nn.Module):
             nn.ReLU(),
             nn.Linear(sym_rel_size, 1),
         )
+        self.perpendicular_symbol_geo_transform_layer = nn.Sequential(
+            nn.Linear(sym_rel_size, sym_rel_size),
+            nn.ReLU(),
+        )
         
         self.sigmoid_ac = nn.Sigmoid()
         
-        self.bce_with_logits_loss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([10.]))
+        self.bce_with_logits_loss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([30.]))
    
         self.nllloss = nn.NLLLoss()
          
@@ -421,21 +446,32 @@ class SymtoGeo(nn.Module):
             geo_matrix = torch.cat((geo_matrix, head_symbol), dim=0)
                 
         text_symbols_expand = symbols.unsqueeze(1)    # [N, 1, h]
-        geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
         
         if symbol_type == "text":
-            assert text_symbol_class != None       
+            assert text_symbol_class != None
+            geo_matrix = self.text_symbol_geo_transform_layer(geo_matrix)
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
             text_symbol_geo_rel = self.forward_text_head_to_geo(text_symbols_expand, geo_matrix_expand, text_symbol_class)
         elif symbol_type == "head":
             assert head_symbol_class != None
+            geo_matrix = self.head_symbol_geo_transform_layer(geo_matrix)
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
             text_symbol_geo_rel = self.forward_text_head_to_geo(text_symbols_expand, geo_matrix_expand, head_symbol_class)
         elif symbol_type == "angle":
+            geo_matrix = self.angle_symbol_geo_transform_layer(geo_matrix)
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
             text_symbol_geo_rel = self.angle_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "bar":
+            geo_matrix = self.bar_symbol_geo_transform_layer(geo_matrix)
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
             text_symbol_geo_rel = self.bar_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "parallel":
+            geo_matrix = self.parallel_symbol_geo_transform_layer(geo_matrix)
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
             text_symbol_geo_rel = self.parallel_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "perpendicular":
+            geo_matrix = self.perpendicular_symbol_geo_transform_layer(geo_matrix)
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
             text_symbol_geo_rel = self.perpendicular_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         else:
             raise ValueError(f"Unknown symbol type: ({symbol_type})")
@@ -467,7 +503,6 @@ class SymtoGeo(nn.Module):
         # [N, P+L+C+(head), 1]
         return torch.cat(results, dim=0)
         
-
     def cal_sym_geo_rel_loss(self, per_data_sym_to_geo_rel_dict, target):
         """
         Args:

@@ -36,6 +36,9 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
     
     text_symbols_parse_results = []     # [Dict("angle": [] or [Point], "line": [] or [Point]), ...]
     other_symbols_parse_results = []    # [Dict("parallel": [lines, ...]), ...]
+    all_points = []
+    all_lines = []
+    all_circles = []
     # parse each data
     for per_geo_info, per_geo_rel, per_sym_geo_rel, per_ocr_res in zip(all_geo_info, geo_rels, sym_geo_rels, ocr_results):
         
@@ -109,11 +112,14 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
                         other_symbols_geos_rel["perpendicular"] = res
                         
         other_symbols_parse_results.append(other_symbols_geos_rel)
+        all_points.append(points)
+        all_lines.append(lines)
+        all_circles.append(circles)
     # print("other_symbols_parse_results: ", other_symbols_parse_results)
     # print()
     # print("-"*100)
     # print()
-    return text_symbols_parse_results, other_symbols_parse_results, points, lines, circles
+    return text_symbols_parse_results, other_symbols_parse_results, all_points, all_lines, all_circles
       
 def parse_geo_rel_per_data(geo_rel):
     """
