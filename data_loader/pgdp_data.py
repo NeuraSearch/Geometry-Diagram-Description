@@ -72,7 +72,7 @@ class GEODataset(torch.utils.data.Dataset):
             self.contents = json.load(file)
         for key in self.contents.keys():
             self.ids.append(key)
-            
+          
         if self.cfg.toy_data:
             self.ids = self.ids[:50]
 
@@ -82,15 +82,21 @@ class GEODataset(torch.utils.data.Dataset):
         img_id = self.ids[index]
         annot_each = self.contents[img_id]
 
-        # Samples without non-geometric primitives do not participate in the training
-        while self.is_train and len(annot_each['symbols'])==0:
-            index = np.random.randint(0, len(self.ids))
-            img_id = self.ids[index]
-            annot_each = self.contents[img_id]
+        if self.cfg.dataset_name == "PGDP5K":
+            # Samples without non-geometric primitives do not participate in the training
+            while self.is_train and len(annot_each['symbols'])==0:
+                index = np.random.randint(0, len(self.ids))
+                img_id = self.ids[index]
+                annot_each = self.contents[img_id]
 
         # 2. 打开图片
-        img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), annot_each['file_name'])).convert("RGB")
-
+        if self.cfg.dataset_name == "PGDP5K":
+            img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), annot_each['file_name'])).convert("RGB")
+        elif self.cfg.dataset_name == "UniGeo":
+            img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), f"{img_id}.png")).convert("RGB")
+        else:
+            raise ValueError(f"Unsupport dataset: {self.cfg.dataset_name}")
+        
         target_det = None
         target_seg = None
         targets_geo = None

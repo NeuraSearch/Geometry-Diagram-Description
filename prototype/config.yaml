@@ -1,15 +1,16 @@
 main_args:
   is_train: True
+  dataset_name: "PGDP5K"
   project_name: "v2.0_train_rel"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
   resume: "archie_west_best/best.pth"
   save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
   eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
-  test_annot_path: "data/PGDP5K/annotations/test_revised.json"
+  test_annot_path: "data/UniGeo/UniGeo_PRV_test.json"
   train_img_path: "data/PGDP5K/train"
   eval_img_path: "data/PGDP5K/val"
-  test_img_path: "data/PGDP5K/test"
+  test_img_path: "data/UniGeo/images_unigeo_prv"
   aspect_ratio_group_factor: 3
   train_img_per_batch: 6
   test_img_per_batch: 6
@@ -37,7 +38,7 @@ optimizer_args:
   momentum: 0.9
   weight_decay: 0.0005
   weight_decay_bias: 0
-  lr: 1.0e-6
+  lr: 1.0e-5
   bias_factor: 2
   lr_steps: [10, 20, 30]
   lr_gamma: 0.2
@@ -90,21 +91,22 @@ rel_args:
 solution_generation_data_args:
   t5_train_img_per_batch: 8
   t5_test_img_per_batch: 8
-  t5_train_img_path: null
-  t5_eval_img_path: null
-  t5_test_img_path: null
-  t5_train_annot_path: null
-  t5_eval_annot_path: null
-  t5_test_annot_path: null
-  t5_train_parse_path: null
-  t5_eval_parse_path: null
-  t5_test_parse_path: null
-  problem_form: "calulation"
+  t5_train_img_path: "data/UniGeo/images_unigeo_cal"
+  t5_eval_img_path: "data/UniGeo/images_unigeo_cal"
+  t5_test_img_path: "data/UniGeo/images_unigeo_cal"
+  t5_train_annot_path: "data/UniGeo/UniGeo_CAL_train.json" 
+  t5_eval_annot_path: "data/UniGeo/UniGeo_CAL_val.json" 
+  t5_test_annot_path: "data/UniGeo/UniGeo_CAL_test.json"
+  t5_train_parse_path: "data/UniGeo/UniGeo_CAL_parse_train.json"
+  t5_eval_parse_path: "data/UniGeo/UniGeo_CAL_parse_val.json"
+  t5_test_parse_path: "data/UniGeo/UniGeo_CAL_parse_test.json"
+  problem_form: "calculation"
 solution_generation_model_args:
-  model_type: "t5-small"
+  gp_resume: null
+  model_type: "t5-base"
   beam_size: 1
-  t5_lr: 1e-4
-  adam_eps: 1e-6
+  t5_lr: 1.0e-4
+  adam_eps: 1.0e-6
 test_args:
   enable_geo_rel: True
   

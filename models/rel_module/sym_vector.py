@@ -83,12 +83,18 @@ class SymVectorBuild(nn.Module):
         self.roi_output_size = cfg.sym_roi_output_size
         self.fpn_strides = cfg.fpn_strides
         
-        # [1200, 1, h]
-        self.row_embeddings = nn.Parameter(torch.randn(1200, cfg.backbone_out_channels).unsqueeze(1))
-        # [1, 1200, h]
-        self.col_embeddings = nn.Parameter(torch.randn(1200, cfg.backbone_out_channels).unsqueeze(0))
-        # [1200, 1200, h] -> [h, 1200, 1200] -> [1, h, 1200, 1200]
-        self.sym_spatial_embeddings = nn.Parameter(torch.permute(self.row_embeddings + self.col_embeddings, (2, 0, 1)).unsqueeze(0))
+        # # [1200, 1, h]
+        # self.row_embeddings = nn.Parameter(torch.randn(1200, cfg.backbone_out_channels).unsqueeze(1))
+        # # [1, 1200, h]
+        # self.col_embeddings = nn.Parameter(torch.randn(1200, cfg.backbone_out_channels).unsqueeze(0))
+        # # [1200, 1200, h] -> [h, 1200, 1200] -> [1, h, 1200, 1200]
+        # self.sym_spatial_embeddings = nn.Parameter(torch.permute(self.row_embeddings + self.col_embeddings, (2, 0, 1)).unsqueeze(0))
+        self.register_buffer("x_coords", torch.linspace(-1, 1, steps=1200))
+        self.register_buffer("y_coords", torch.linspace(-1, 1, steps=1200))
+        grid_x, grid_y = torch.meshgrid(self.x_coords, self.y_coords)
+        grid = torch.stack([grid_x, grid_y], dim=-1)    # [h, w, 2]
+        self.register_buffer("grid_flatten", torch.flatten(grid, start_dim=0, end_dim=1))   # [h*w, 2]
+        self.spatial_embeddings = nn.Linear(2, cfg.backbone_out_channels)
 
         self.sym_head = SymVectorHead(
             inp_channel=cfg.backbone_out_channels,
@@ -162,8 +168,11 @@ class SymVectorBuild(nn.Module):
                                    output_size=self.roi_output_size,
                                    spatial_scale=1 / self.fpn_strides[layer_num])
                 
+                pos_embs = self.spatial_embeddings(self.grid_flatten)
+                pos_embs = torch.reshape(pos_embs, (1200, 1200, -1))  # [h, w, c]
+                pos_embs = torch.permute(pos_embs, (2, 0, 1)).unsqueeze(0)  # [1, c, h, w]
                 # spatial_feature: [1, c, output_size, output_size]
-                spatial_feature = roi_align(input=self.sym_spatial_embeddings, boxes=[box],
+                spatial_feature = roi_align(input=pos_embs, boxes=[box],
                                             output_size=self.roi_output_size, spatial_scale=1 / self.fpn_strides[layer_num])
                 feature += spatial_feature
 
@@ -268,9 +277,12 @@ class SymVectorBuild(nn.Module):
                 feature = roi_align(input=layer_feature_map, boxes=[box], 
                                    output_size=self.roi_output_size,
                                    spatial_scale=1 / self.fpn_strides[layer_num]) 
-
+                
+                pos_embs = self.spatial_embeddings(self.grid_flatten)
+                pos_embs = torch.reshape(pos_embs, (1200, 1200, -1))  # [h, w, c]
+                pos_embs = torch.permute(pos_embs, (2, 0, 1)).unsqueeze(0)  # [1, c, h, w]
                 # spatial_feature: [1, c, output_size, output_size]
-                spatial_feature = roi_align(input=self.sym_spatial_embeddings, boxes=[box],
+                spatial_feature = roi_align(input=pos_embs, boxes=[box],
                                             output_size=self.roi_output_size, spatial_scale=1 / self.fpn_strides[layer_num])
                 feature += spatial_feature
                 
