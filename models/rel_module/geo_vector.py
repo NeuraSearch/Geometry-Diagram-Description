@@ -13,10 +13,11 @@ class GeoVectorHead(nn.Module):
     def __init__(self, inp_channel, out_channel):
         super(GeoVectorHead, self).__init__()
 
-        self.row_embeddings = nn.Embedding(350, inp_channel)
-        self.col_embeddings = nn.Embedding(350, inp_channel)
-        self.register_buffer("row_ids", torch.arange(350))
-        self.register_buffer("col_ids", torch.arange(350))
+        # self.row_embeddings = nn.Embedding(350, inp_channel)
+        # self.col_embeddings = nn.Embedding(350, inp_channel)
+        # self.register_buffer("row_ids", torch.arange(350))
+        # self.register_buffer("col_ids", torch.arange(350))
+        self.spatial_embedddings = nn.Linear(2, inp_channel)
         
         self.geo_feature_nn = nn.Linear(inp_channel, out_channel, bias=False)
         self.geo_feature_ac = nn.ReLU()
@@ -26,9 +27,10 @@ class GeoVectorHead(nn.Module):
         self.fuse_nn = nn.Linear(out_channel, out_channel)
         self.fuse_ac = nn.ReLU()
     
-    def forward(self, feature, geo_type):
+    def forward(self, feature, all_mask_tensor, geo_type):
         """
             feature: [N, c, h, w], N is the aggregate of the points (or lines, or circles) in one data.
+            all_mask_tensor: [N, c, h, w]
             geo_type: str, "point" or "line" or "circle".
         """
         
@@ -52,12 +54,23 @@ class GeoVectorHead(nn.Module):
         # [N, c, h, w] -> [[N, h, w, c]
         geo_feature = torch.permute(feature, (0, 2, 3, 1))
         
-        row = geo_feature.size(1)
-        col = geo_feature.size(2)
-        this_row_embeds = self.row_embeddings(self.row_ids[:row]).unsqueeze(1)   # [row, 1, h]
-        this_col_embeds = self.col_embeddings(self.col_ids[:col]).unsqueeze(0)   # [1, col, h]
-        feature_spatial_embeds = (this_row_embeds + this_col_embeds).unsqueeze(0).repeat(geo_feature.size(0), 1, 1, 1)  # [N, row, col, h]
-        geo_feature += feature_spatial_embeds   # [N, h, w, c]
+        # row = geo_feature.size(1)
+        # col = geo_feature.size(2)
+        # this_row_embeds = self.row_embeddings(self.row_ids[:row]).unsqueeze(1)   # [row, 1, h]
+        # this_col_embeds = self.col_embeddings(self.col_ids[:col]).unsqueeze(0)   # [1, col, h]
+        # feature_spatial_embeds = (this_row_embeds + this_col_embeds).unsqueeze(0).repeat(geo_feature.size(0), 1, 1, 1)  # [N, row, col, h]
+        x_coords = torch.linspace(-1, 1, steps=feature.size(3)).to(geo_feature.device)
+        y_coords = torch.linspace(-1, 1, steps=feature.size(2)).to(geo_feature.device)
+        grid_x, grid_y = torch.meshgrid(x_coords, y_coords)
+        grid = torch.stack([grid_x, grid_y], dim=-1)    # [h, w, 2]
+        grid_flatten = torch.flatten(grid, start_dim=0, end_dim=1)  # [h*w, 2]
+        pos_embs = self.spatial_embedddings(grid_flatten)   # [h*w, h]
+        pos_embs = torch.reshape(pos_embs, (feature.size(2), feature.size(3), -1))  #[height, w, h]       
+        pos_embs = pos_embs.unsqueeze(0).repeat(feature.size(0), 1, 1, 1)   # [N, height, w, h]
+        
+        # pos_embs = pos_embs * all_mask_tensor
+        
+        geo_feature += pos_embs   # [N, h, w, c]
         geo_feature = torch.permute(geo_feature, (0, 3, 1, 2))  # [N, c, h, w]
         
         # [N, c, h, w] -> [N, c, h * w] -> [N, c]
@@ -206,16 +219,19 @@ class GeoVectorBuild(nn.Module):
             geo_type: str, "point" or "line" or "circle".
         """
         all_mask_map = []
+        all_mask_tensor = []
         for mask in batch_mask:
             # expand mask[h,w] to channel size [c,h,w]
             # [h, w] -> [feat_channel, h, w]
             mask_expand = mask.unsqueeze(0).repeat(feature_map.size(0), 1, 1)
+            all_mask_tensor.append(mask_expand)
             # [feat_channel, h, w] * [feat_channel, h, w] = [feat_channel, h, w]
             all_mask_map.append(feature_map * mask_expand)
-                
+        
         if len(all_mask_map) > 0:
+            all_mask_tensor = torch.stack(all_mask_tensor, dim=0)   # [N, feat_channel, h, w]
             # [N, feat_channel, h, w] -> [N, geo_embed_size]
-            geo_feature = self.geo_head(feature=torch.stack(all_mask_map, dim=0), geo_type=geo_type)
+            geo_feature = self.geo_head(feature=torch.stack(all_mask_map, dim=0), all_mask_tensor=all_mask_tensor, geo_type=geo_type)
             return geo_feature
         else:
             return []

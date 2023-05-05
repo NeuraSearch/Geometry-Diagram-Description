@@ -66,13 +66,13 @@ class GeoEvaluation:
                 if choice is None:
                     assert img_id not in self.cal_wrong_predictions
                     self.cal_wrong_predictions[img_id] = {
-                        "problems_types": batch_data[b]["problems_types"],
-                        "problem": batch_data[b]["problem"],
-                        "golden_program": batch_data[b]["program"],
+                        "problems_types": batch_data["problems_types"][b],
+                        "problem": batch_data["problem"][b],
+                        "golden_program": batch_data["program"][b],
                         "predict_program": pred[b*num_beam:(b+1)*num_beam],
-                        "numbers": batch_data[b]["numbers"],
-                        "choice_numbers": batch_data[b]["choice_numbers"],
-                        "label": batch_data[b]["label"],
+                        "numbers": batch_data["numbers"][b],
+                        "choice_numbers": batch_data["choice_numbers"][b],
+                        "label": batch_data["label"][b],
                     }
                     metric_logger.update(cal_acc=0.0)
                     metric_logger.update(cal_no_res=1.0)
@@ -86,13 +86,13 @@ class GeoEvaluation:
                 else:
                     assert img_id not in self.cal_wrong_predictions
                     self.cal_wrong_predictions[img_id] = {
-                        "problems_types": batch_data[b]["problems_types"],
-                        "problem": batch_data[b]["problem"],
-                        "golden_program": batch_data[b]["program"],
+                        "problems_types": batch_data["problems_types"][b],
+                        "problem": batch_data["problem"][b],
+                        "golden_program": batch_data["program"][b],
                         "predict_program": pred[b*num_beam:(b+1)*num_beam],
-                        "numbers": batch_data[b]["numbers"],
-                        "choice_numbers": batch_data[b]["choice_numbers"],
-                        "label": batch_data[b]["label"],
+                        "numbers": batch_data["numbers"][b],
+                        "choice_numbers": batch_data["choice_numbers"][b],
+                        "label": batch_data["label"][b],
                     }
 
                 flag = 1.0 if choice == label[b] else 0

@@ -93,7 +93,7 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
            primitives_info["points"] = generate_for_points(per_data_points)
         
         if len(per_data_lines) > 0:
-            print("haha")
+            # print("haha")
             primitives_info["lines"] = generate_for_lines(per_data_lines)
         
         if len(per_data_circles) > 0:
@@ -128,7 +128,7 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
             continue
         per_data_other_symbol_nl = defaultdict(list)    # value: [] or [str, str, str]
         for sym_key, sym_val in per_data_result.items():
-            print("sym_key: ", sym_key)
+            # print("sym_key: ", sym_key)
             if "angle" in sym_key:  # congruent angle
                 res = generate_for_congruent_angle(sym_val)
                 if res != None:

@@ -14,12 +14,13 @@ from transformers import T5ForConditionalGeneration
 class TransformerProgramGenerator(nn.Module):
     """This class is for generating solution program according to the parse results."""
     
-    def __init__(self, cfg):
+    def __init__(self, cfg, save_dir):
         super(TransformerProgramGenerator, self).__init__()
         
         self.cfg = cfg
         
-        self.t5_model = T5ForConditionalGeneration.from_pretrained(cfg.model_type)
+        # self.t5_model = T5ForConditionalGeneration.from_pretrained(cfg.model_type)
+        self.t5_model = T5ForConditionalGeneration.from_pretrained(os.path.join(save_dir, "t5/t5"))
         
     def forward(self, input_ids, attention_mask, target_ids=None):
         

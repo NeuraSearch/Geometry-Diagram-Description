@@ -183,6 +183,8 @@ def make_data_loader_for_T5(cfg, is_train=True, is_distributed=False, start_iter
             is_train=False,
             cfg=cfg,
         )
+        
+    return train_dataset, eval_dataset, test_dataset
 
 def geo_data_collate_fn(datas_list):
     batch = list(zip(*datas_list))
@@ -208,7 +210,8 @@ def geo_data_collate_fn(datas_list):
 def unigeo_data_collate_fn(data_list, tokenizer):
     batch = list(zip(*data_list))
     
-    images = to_image_list(batch[6], batch[6])
+    # images = to_image_list(batch[6], batch[6])
+    images = None
     problems_types = list(batch[0])
     problem = list(batch[1])
     program = list(batch[2])
@@ -231,6 +234,8 @@ def unigeo_data_collate_fn(data_list, tokenizer):
         truncation=True,
         return_tensors="pt",    
     )
+    
+    tokenized_program[tokenized_program == tokenizer.pad_token_id] = -100
     
     return {
         "images": images,

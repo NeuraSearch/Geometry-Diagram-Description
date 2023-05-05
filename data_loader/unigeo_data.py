@@ -29,7 +29,7 @@ class UniGeoDataset(torch.utils.data.Dataset):
         for key in self.contents.keys():
             self.ids.append(key)
         
-        if self.cfg.toy_data:
+        if cfg.toy_data:
             self.ids = self.ids[:50]
         
     def __getitem__(self, index):
@@ -38,12 +38,17 @@ class UniGeoDataset(torch.utils.data.Dataset):
         annot_each = self.contents[img_id]
         parse_each = self.parse_contents[img_id]
         
-        img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), f"{img_id}.png")).convert("RGB")
+        # img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), f"{img_id}.png")).convert("RGB")
         
         # TODO: 在这里到时候加上Diagram Description的内容
         # process the "parse_each"
         diagram_description = ""
-        
+        for _, des in parse_each.items():
+            if type(des) == str:
+                diagram_description = diagram_description + des + " "
+            elif (type(des) == list) and (len(des) != 0):
+                diagram_description = diagram_description + " ".join(des) + " "
+                
         problem_type = diagram_description + annot_each["p_type"]
         problem = annot_each["problem"]
         program = annot_each["program"]
@@ -51,8 +56,9 @@ class UniGeoDataset(torch.utils.data.Dataset):
         choice_numbers = annot_each["choice_numbers"]
         label = annot_each["label"]
         
-        if self.transforms is not None:
-            img, _, _, _ = self.transforms(img_org, is_train=False)
+        # if self.transforms is not None:
+        #     img, _, _, _ = self.transforms(img_org, is_train=False)
+        img = None
         
         return problem_type, problem, program, numbers, choice_numbers, label, img, img_id
     

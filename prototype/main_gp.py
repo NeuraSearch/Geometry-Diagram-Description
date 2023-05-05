@@ -25,7 +25,7 @@ from train_utils import init_distributed_mode, \
                     is_main_process, build_optmizer_for_t5, create_logger, \
                         load_from_url
 from data_loader import make_data_loader_for_T5, unigeo_data_collate_fn
-
+os.environ["CURL_CA_BUNDLE"]=""
 def main(args):
     # setup multiple GPUs training
     init_distributed_mode(args)
@@ -97,8 +97,11 @@ def main(args):
         train_batch_sampler = torch.utils.data.BatchSampler(
             train_sampler, args.t5_train_img_per_batch, drop_last=True)
 
-    tokenizer = T5Tokenizer.from_pretrained(args.model_type)
-    unigeo_data_collate_fn_func = partial(unigeo_data_collate_fn, model_type=tokenizer)
+    from transformers import PreTrainedTokenizerFast
+    tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join("/".join(save_dir.split("/")[:-1]), "t5/t5/tokenizer.json"))
+    tokenizer.pad_token_id = 0
+    # tokenizer = T5Tokenizer.from_pretrained(args.model_type)
+    unigeo_data_collate_fn_func = partial(unigeo_data_collate_fn, tokenizer=tokenizer)
     if args.is_train:
         # create data loader
         data_loader_train = torch.utils.data.DataLoader(
@@ -118,7 +121,7 @@ def main(args):
 
     # create model
     print("creating model")
-    model = TransformerProgramGenerator(args)
+    model = TransformerProgramGenerator(args, "/".join(save_dir.split("/")[:-1]))
     # model = ToyModel()
     model.to(device)
     print("finsih creating model")
@@ -144,12 +147,12 @@ def main(args):
     
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
     
-    lr_scheduler = get_linear_schedule_with_warmup(optimizer, 1000, args.epoch * len(data_loader_train) // args.t5_train_img_per_batch)
+    lr_scheduler = get_linear_schedule_with_warmup(optimizer, 1000, args.epochs * len(data_loader_train) // args.t5_train_img_per_batch)
     
     args.start_epoch = 0
-    if args.resume:
-        print(f"Restore model from {os.path.join(str(MAIN_PATH / args.save_dir), args.resume)}")
-        checkpoint = torch.load(os.path.join(str(MAIN_PATH / args.save_dir), args.resume), map_location="cpu")
+    if args.gp_resume:
+        print(f"Restore model from {os.path.join(str(MAIN_PATH / args.save_dir), args.gp_resume)}")
+        checkpoint = torch.load(os.path.join(str(MAIN_PATH / args.save_dir), args.gp_resume), map_location="cpu")
                 
         model_without_ddp.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optimizer"])
@@ -170,7 +173,7 @@ def main(args):
         
         mean_loss, lr = train_one_epoch_program(model, optimizer, data_loader_train,
                                         device, epoch, lr_scheduler, args.print_freq,
-                                        warmup=args.warmpup, scaler=scaler, run=run, logger=logger)
+                                        scaler=scaler, run=run, logger=logger)
     
         print(f"[Epoch: {epoch}] starts evaluation ...")
         predictions = evaluate_program(model, data_loader_eval, device=device, tokenizer=tokenizer, cfg=args, save_dir=save_dir, epoch=epoch, logger=logger)
