@@ -318,7 +318,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                                 break
                                 
                                 if len(selected_points) == 2 and len(ocr[i]) > 0:
-                                    res = resolve_PCP(circles, which_circle_ids, ocr[i])
+                                    res = resolve_PCP(ocr[i])
                                     # print("res: ", res)
                                     if res != None:
                                         parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], points[selected_points[1]], res])
@@ -407,7 +407,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                 break
                 
                 if len(selected_points) == 2 and len(ocr[i]) > 0:
-                    res = resolve_PCP(circles, which_circle_ids, ocr[i])
+                    res = resolve_PCP(ocr[i])
                     # print("res: ", res)
                     if res != None:
                         parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], selected_points[1], res])
@@ -463,7 +463,7 @@ def resolve_PLP(ocr_str):
     
     return None
 
-def resolve_PCP(circles, which_circle_ids, ocr_str):
+def resolve_PCP(ocr_str):
     
     if len(re.findall(r"\d", ocr_str)) > 0:
         return int(re.sub(" ", "", ocr_str))
