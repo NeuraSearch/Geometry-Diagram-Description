@@ -85,6 +85,7 @@ class DiagramDescribe(nn.Module):
                     gt_line_mask=rel_metatdata["gt_line_mask"],
                     gt_circle_mask=rel_metatdata["gt_circle_mask"],
                     targets_det=rel_metatdata["targets_det"],
+                    targets_seg=rel_metatdata["targets_seg"],
                     all_labels_to_layer=rel_metatdata["all_labels_to_layer"],
                     targets_geo=targets_geo,
                     targets_sym=targets_sym,

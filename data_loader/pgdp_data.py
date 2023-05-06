@@ -74,7 +74,7 @@ class GEODataset(torch.utils.data.Dataset):
             self.ids.append(key)
           
         if self.cfg.toy_data:
-            self.ids = self.ids[:50]
+            self.ids = self.ids[100:150]
 
     def __getitem__(self, index):
         
@@ -131,7 +131,7 @@ class GEODataset(torch.utils.data.Dataset):
                     }
             """
             target_seg = self.get_target_seg(annot_each, img_org.size)
-            
+
             # 3.3 get targets_geo
             targets_geo, (points_num, lines_num, circles_num) = self.get_geo2geo_rel(annot_each, target_seg)
         

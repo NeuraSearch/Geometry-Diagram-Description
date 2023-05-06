@@ -11,9 +11,9 @@ main_args:
   train_img_path: "data/PGDP5K/train"
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/UniGeo/images_unigeo_prv"
-  aspect_ratio_group_factor: 3
-  train_img_per_batch: 20
-  test_img_per_batch: 20
+  aspect_ratio_group_factor: -1
+  train_img_per_batch: 10
+  test_img_per_batch: 10
   workers: 8
   dist_url: "env://"
   sync_bn: True

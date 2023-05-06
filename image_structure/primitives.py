@@ -177,7 +177,7 @@ def generate_for_points(per_data_points):
 def generate_for_lines(per_data_lines):
     lines_res = []
     endpoints_res = []
-    onlines_res = []    
+    onlines_res = []
     for line in per_data_lines:
         endpoints_per_line = []
         onlines_per_line = []
@@ -198,20 +198,26 @@ def generate_for_lines(per_data_lines):
     
     res = "The digram contains "
     for line, endpoints, onlines in zip(lines_res, endpoints_res, onlines_res):
-        res += f"Line {line}, "
-        
+        flag = False
         if len(endpoints) > 0:
+            res += f"Line {line}, "
+            flag = True
             temp = "which has endpoints: "
             for end in endpoints:
                 temp += f"Point {end}, "
             res += temp
         elif len(onlines) > 0:
+            if not flag:
+                res += f"Line {line}, "
             temp = "In addition, there are "
             for on in onlines:
                 temp += f"Point {on}, "
             res += temp
             res += "on the line."
-
+    
+    if res == "The digram contains ":
+        res = ""
+        
     return res
 
 def generate_for_circles(per_data_circles):
@@ -238,19 +244,24 @@ def generate_for_circles(per_data_circles):
     
     res = "The digram contains "
     for circle, oncircles, center in zip(circles_res, oncircles_res, center_res):
-        res += f"Circle {circle}, "
-
+        flag = False
         if len(center) == 1:
+            res += f"Circle {circle}, "
+            flag = True
             temp = f"whose center point is {center[0]}, "
             res += temp
         
         if len(oncircles) > 0:
+            if not flag:
+                res += f"Circle {circle}, "
             temp = "which has "
             for on in oncircles:
                 temp += f"Point {on}, "
             res += temp
             res += "on its arc."
     
+    if res == "The digram contains ":
+        res = ""
     return res
 
 def generate_for_text_symbols(per_data_result):
@@ -276,9 +287,9 @@ def generate_for_text_symbols(per_data_result):
         elif type(point) == Circle:
             if len(point.rel_center_points) > 0:
                 center_point = point.rel_center_points[0]
-                angles_res.append(f"Line {line_1} and Line {line_2} cross at the Center Point {center_point} of Circle {[point]} has degree of {str(degree)}.")
+                angles_res.append(f"Line {line_1} and Line {line_2} cross at the Center Point {center_point} of Circle {point} has degree of {str(degree)}.")
             else:
-                angles_res.append(f"Line {line_1} and Line {line_2} cross at the Center Point of Circle {[point]} has degree of {str(degree)}.")
+                angles_res.append(f"Line {line_1} and Line {line_2} cross at the Center Point of Circle {point} has degree of {str(degree)}.")
             
     # length
     lines_res = []

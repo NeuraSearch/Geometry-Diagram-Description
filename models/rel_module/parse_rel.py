@@ -466,7 +466,10 @@ def resolve_PLP(ocr_str):
 def resolve_PCP(ocr_str):
     
     if len(re.findall(r"\d", ocr_str)) > 0:
-        return int(re.sub(" ", "", ocr_str))
+        try:
+            return int(re.sub(" ", "", ocr_str))
+        except ValueError:
+            return None
         
     return None
 

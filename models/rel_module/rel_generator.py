@@ -36,7 +36,7 @@ class RelGenerator(nn.Module):
     def forward(self,
                 geo_feature_map, sym_feature_maps,
                 gt_point_mask=None, gt_line_mask=None, gt_circle_mask=None,
-                targets_det=None, all_labels_to_layer=None,
+                targets_seg=None, targets_det=None, all_labels_to_layer=None,
                 proposals_seg=None, proposals_det=None,
                 images_not_tensor=None,
                 targets_geo=None, targets_sym=None):
@@ -71,6 +71,7 @@ class RelGenerator(nn.Module):
             gt_point_mask=gt_point_mask,
             gt_line_mask=gt_line_mask,
             gt_circle_mask=gt_circle_mask,
+            targets_seg=targets_seg,
             proposals_seg=proposals_seg,
         )
         

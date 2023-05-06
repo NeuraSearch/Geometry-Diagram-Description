@@ -86,8 +86,8 @@ def main(args):
             test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset)
     else:
         if args.is_train:
-            train_sampler = torch.utils.data.RandomSampler(train_dataset)
-            # train_sampler = torch.utils.data.SequentialSampler(train_dataset)
+            # train_sampler = torch.utils.data.RandomSampler(train_dataset)
+            train_sampler = torch.utils.data.SequentialSampler(train_dataset)
             eval_sampler = torch.utils.data.SequentialSampler(eval_dataset)
         else:
             test_sampler = torch.utils.data.SequentialSampler(test_dataset)

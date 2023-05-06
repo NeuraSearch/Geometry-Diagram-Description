@@ -138,6 +138,7 @@ class GeneralizedRCNN(nn.Module):
                             "gt_line_mask": gt_mask[1],
                             "gt_circle_mask": gt_mask[2],
                             "targets_det": targets_det,
+                            "targets_seg": targets_seg,
                             "all_labels_to_layer": all_labels_to_layer,
                             "geo_feature_map": features[0],
                             "sym_feature_maps": features[1:]}
