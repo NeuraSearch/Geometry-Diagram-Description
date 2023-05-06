@@ -1,7 +1,7 @@
 main_args:
   is_train: True
   dataset_name: "PGDP5K"
-  project_name: "v2.0_train_rel"
+  project_name: "v2.2_train_rel"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
   resume: "archie_west_best/best.pth"
   save_dir: "checkpoints"
@@ -25,7 +25,7 @@ main_args:
   wandb_key: null
   epochs: 100
   warmpup: False
-  toy_data: True
+  toy_data: False
   #  only_train_rel  only_parse
   #    True           True     >> invalid
   #    True           False    >> fix seg_det, train rel
