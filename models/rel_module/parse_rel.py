@@ -217,19 +217,19 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                             points[which_point_ids].ref_name = ocr[i]
                             class_0_cache[idx] = None
                         break
-                    elif func["lines"](idx):
-                        # print("2_line...")
-                        which_line_ids = idx - geo_start_ids["lines"]
-                        if len(ocr[i]) > 0:
-                            lines[which_line_ids].ref_name = ocr[i]
-                            class_0_cache[idx] = None
-                        break
-                    elif func["circles"](idx):
-                        # print("3_circle...")
-                        which_circle_ids = idx - geo_start_ids["circles"]
-                        circles[which_circle_ids].ref_name = ocr[i]
-                        class_0_cache[idx] = None
-                        break
+                    # elif func["lines"](idx):
+                    #     # print("2_line...")
+                    #     which_line_ids = idx - geo_start_ids["lines"]
+                    #     if len(ocr[i]) > 0:
+                    #         lines[which_line_ids].ref_name = ocr[i]
+                    #         class_0_cache[idx] = None
+                    #     break
+                    # elif func["circles"](idx):
+                    #     # print("3_circle...")
+                    #     which_circle_ids = idx - geo_start_ids["circles"]
+                    #     circles[which_circle_ids].ref_name = ocr[i]
+                    #     class_0_cache[idx] = None
+                    #     break
                     elif func["head"](idx):
                         # print("4_head...")
                         which_head_ids = idx - geo_start_ids["head"]

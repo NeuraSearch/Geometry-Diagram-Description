@@ -26,7 +26,7 @@ print(args)
 
 train_dataset, eval_dataset, test_dataset = make_data_loader(args)
 
-train_sampler = torch.utils.data.RandomSampler(train_dataset)
+train_sampler = torch.utils.data.SequentialSampler(train_dataset)
 group_ids = create_aspect_ratio_groups(train_dataset, k=3)
 train_batch_sampler = GroupBatchSampler(train_sampler, group_ids, 2)
 train_data_loader = torch.utils.data.DataLoader(
@@ -52,13 +52,13 @@ eval_data_loader = torch.utils.data.DataLoader(
 #     test_dataset, batch_size=2, collate_fn=geo_data_collate_fn, shuffle=False
 # )
 
+all_classes = {0: 0, 1: 0, 2: 0}
 for i, batch in enumerate(train_data_loader):
-    print(i+1)
-    print(batch)
-    print()
-    print()
-    print()
-    print("*"*100)
-    print()
-    print()
-    print()
+    
+    for targets_geo in batch["targets_geo"]:
+        if targets_geo["pl_rels"] != None:
+            counts = targets_geo["pl_rels"].unique(return_counts=True)[1].tolist()
+            for i, c in enumerate(counts):
+                all_classes[i] += c
+
+print(all_classes)

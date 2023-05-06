@@ -22,7 +22,7 @@ class GeotoGeo(nn.Module):
         )
         
         self.log_softmax = nn.LogSoftmax(dim=-1)
-        self.nllloss = nn.NLLLoss(torch.FloatTensor([1, 5, 5]))
+        self.nllloss = nn.NLLLoss(torch.FloatTensor([1, 1.75, 8.5]))
         
     def forward(self, all_geo_info, targets_geo=None):
         
@@ -235,7 +235,7 @@ class SymtoGeo(nn.Module):
         
         self.bce_with_logits_loss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([10.]))
    
-        self.nllloss = nn.NLLLoss()
+        self.nllloss = nn.NLLLoss(torch.FloatTensor([1, 3.5, 3, 30]))
          
     def forward(self, all_geo_info, all_sym_info, targets_sym=None):
         
@@ -450,28 +450,28 @@ class SymtoGeo(nn.Module):
         if symbol_type == "text":
             assert text_symbol_class != None
             geo_matrix = self.text_symbol_geo_transform_layer(geo_matrix)
-            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+C, h]
             text_symbol_geo_rel = self.forward_text_head_to_geo(text_symbols_expand, geo_matrix_expand, text_symbol_class)
         elif symbol_type == "head":
             assert head_symbol_class != None
             geo_matrix = self.head_symbol_geo_transform_layer(geo_matrix)
-            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+C, h]
             text_symbol_geo_rel = self.forward_text_head_to_geo(text_symbols_expand, geo_matrix_expand, head_symbol_class)
         elif symbol_type == "angle":
             geo_matrix = self.angle_symbol_geo_transform_layer(geo_matrix)
-            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L, h]
             text_symbol_geo_rel = self.angle_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "bar":
             geo_matrix = self.bar_symbol_geo_transform_layer(geo_matrix)
-            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L, h]
             text_symbol_geo_rel = self.bar_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "parallel":
             geo_matrix = self.parallel_symbol_geo_transform_layer(geo_matrix)
-            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, L, h]
             text_symbol_geo_rel = self.parallel_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         elif symbol_type == "perpendicular":
             geo_matrix = self.perpendicular_symbol_geo_transform_layer(geo_matrix)
-            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L+P+L+C, h]
+            geo_matrix_expand = geo_matrix.unsqueeze(0)   # [1, P+L, h]
             text_symbol_geo_rel = self.perpendicular_symbol_to_geo_layer(text_symbols_expand + geo_matrix_expand)
         else:
             raise ValueError(f"Unknown symbol type: ({symbol_type})")

@@ -530,15 +530,11 @@ class GEODataset(torch.utils.data.Dataset):
     
     def get_text_symbol_geo_rel(self, sym_labels, sym_ids, sym2geo, sym2sym, points_num, lines_num, circles_num):
         
-        # P + L + LPL + PLP + PCP
-        # !!! I think there's a bug in the original code,
-        #       the points_num for LPL, and lines_num for PLP should be zero if:
-        #       no line available for LPL, and no point available for PLP.
-        # Hence, we create lpl_num, plp_num, pcp_num.
-        lpl_num = points_num if lines_num != 0 else 0
-        plp_num = lines_num if points_num != 0 else 0
-        pcp_num = circles_num if points_num != 0 else 0
-        # column_len = points_num + lines_num + lpl_num + plp_num + pcp_num
+        # P + L + C
+        # only P: point
+        # P + 2L: LPL
+        # L + 2P: PLP
+        # C + 2P: PCP
         column_len = points_num + lines_num + circles_num
         row_len = sym_labels.tolist().count(self.CLASSES_SYM.index("text"))
    
@@ -579,12 +575,9 @@ class GEODataset(torch.utils.data.Dataset):
             geos = rel[1]
             
             if sym in text_sym_dict:
-                if len(geos) == 1:  # P, L
+                if len(geos) == 1:  # P
                     if geos[0][0] == "p":
                         text_symbol_geo_rel[text_sym_dict[sym], int(geos[0][1:])] = 1.
-                    elif geos[0][1] == "l":
-                        offset = points_num
-                        text_symbol_geo_rel[text_sym_dict[sym], offset + int(geos[0][1:])] = 1.
                     else:
                         raise ValueError
                 elif len(geos) == 3:    # LPL, PLP, PCP
@@ -620,7 +613,6 @@ class GEODataset(torch.utils.data.Dataset):
             for rel in sym2sym:
                 if len(rel[1]) == 1:
                     head_sym = rel[1][0]
-                    # offset = points_num + lines_num + lpl_num + plp_num + pcp_num
                     offset = points_num + lines_num + circles_num
                     text_symbol_geo_rel[text_sym_dict[rel[0]], offset + head_sym_dict[head_sym]] = 1.
                     text_symbol_class[text_sym_dict[rel[0]]] = 0
@@ -653,7 +645,6 @@ class GEODataset(torch.utils.data.Dataset):
                                 head_symbol_geo_rel[head_sym_dict[head_sym], p_idx] = 1.
                                 head_symbol_class[head_sym_dict[head_sym]] = 3
                             elif p_num == 1:
-                                # offset = 0
                                 p_idx = [int(geo[1:]) for geo in rel_sym2geo[1] if geo[0] == "p"]
                                 head_symbol_geo_rel[head_sym_dict[head_sym], p_idx[0]] = 1.
                             else:
