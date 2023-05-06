@@ -495,7 +495,7 @@ def extract_congruent_angle_geo(symbol_geo_rel, points, lines):
             if len(selected_point) == 1:
                 for val, idx in zip(max_L_value_cand.tolist(), max_L_idx_cand.tolist()):
                     # print("angle line val, idx: ", val, idx)
-                    if (idx not in line_idx_cache) and (val > 0.5):
+                    if val > 0.5:
                         selected_lines.append(idx)
                         line_idx_cache[idx] = None
                         if len(selected_lines) == 2:
@@ -529,7 +529,7 @@ def extract_congruent_bar_geo(symbol_geo_rel, lines, points):
             if len(selected_line) == 1:
                 for val, idx in zip(max_P_value_cand.tolist(), max_P_idx_cand.tolist()):
                     # print("bar point val, idx: ", val, idx)
-                    if (idx not in point_idx_cache) and (val > 0.5):
+                    if val > 0.5:
                         selected_points.append(idx)
                         point_idx_cache[idx] = None
                         if len(selected_points) == 2:

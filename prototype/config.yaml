@@ -12,8 +12,8 @@ main_args:
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/UniGeo/images_unigeo_prv"
   aspect_ratio_group_factor: 3
-  train_img_per_batch: 6
-  test_img_per_batch: 6
+  train_img_per_batch: 20
+  test_img_per_batch: 20
   workers: 8
   dist_url: "env://"
   sync_bn: True
@@ -21,20 +21,20 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  # wandb_key: null
+  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  wandb_key: null
   epochs: 100
   warmpup: False
-  toy_data: False
+  toy_data: True
   #  only_train_rel  only_parse
   #    True           True     >> invalid
   #    True           False    >> fix seg_det, train rel
   #    False          True     >> train seg_det, no rel
   #    False          False    >> normal 
-  only_train_rel: False
+  only_train_rel: True
   only_parse: False
 optimizer_args:
-  optimization_method: "adam"
+  optimization_method: "sgd"
   momentum: 0.9
   weight_decay: 0.0005
   weight_decay_bias: 0
