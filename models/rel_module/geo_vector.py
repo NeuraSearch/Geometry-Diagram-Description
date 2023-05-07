@@ -121,7 +121,7 @@ class GeoVectorBuild(nn.Module):
     def __init__(self, cfg):
         super(GeoVectorBuild, self).__init__()
 
-        self.geo_head = GeoVectorHead(inp_channel=cfg.backbone_out_channels,
+        self.geo_head = GeoVectorHead(inp_channel=64,
                                       out_channel=cfg.geo_embed_size)
 
 

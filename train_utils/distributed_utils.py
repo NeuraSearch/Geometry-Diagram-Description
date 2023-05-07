@@ -337,8 +337,9 @@ def build_optmizer(cfg, model):
             continue
         if not value.requires_grad:
             continue
+        
         lr = cfg.lr
-        if key.startswith(prefix):
+        if key.startswith(prefix) or key.startswith(prefix_2):
             lr = 1e-4
         weight_decay = cfg.weight_decay     # the weight regularization terms
         if "bias" in key:
