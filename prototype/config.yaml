@@ -1,5 +1,7 @@
 main_args:
   is_train: True
+  use_all_data: True
+  all_img_path: "data/PGDP5K/all_img"
   dataset_name: "PGDP5K"
   project_name: "v2.4_train_rel"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
@@ -7,10 +9,10 @@ main_args:
   save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
   eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
-  test_annot_path: "data/UniGeo/UniGeo_PRV_test.json"
+  test_annot_path: "data/PGDP5K/annotations/test_revised.json"
   train_img_path: "data/PGDP5K/train"
   eval_img_path: "data/PGDP5K/val"
-  test_img_path: "data/UniGeo/images_unigeo_prv"
+  test_img_path: "data/PGDP5K/test"
   aspect_ratio_group_factor: 3
   train_img_per_batch: 20
   test_img_per_batch: 20
@@ -21,8 +23,8 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  # wandb_key: null
+  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  wandb_key: null
   epochs: 100
   warmpup: False
   toy_data: False

@@ -34,6 +34,10 @@ train_data_loader = torch.utils.data.DataLoader(
     collate_fn=geo_data_collate_fn
 )
 
+for batch in train_data_loader:
+    pass
+exit()
+
 eval_sampler = torch.utils.data.SequentialSampler(eval_dataset)
 eval_batch_sampler = torch.utils.data.BatchSampler(eval_sampler, 2, drop_last=False)
 eval_data_loader = torch.utils.data.DataLoader(
@@ -41,24 +45,24 @@ eval_data_loader = torch.utils.data.DataLoader(
     collate_fn=geo_data_collate_fn
 )
 
-# test_sampler = torch.utils.data.SequentialSampler(test_dataset)
-# test_batch_sampler = torch.utils.data.BatchSampler(test_sampler, 2, drop_last=True)
-# test_data_loader = torch.utils.data.DataLoader(
-#     test_dataset, batch_sampler=test_batch_sampler,
-#     collate_fn=geo_data_collate_fn
-# )
+test_sampler = torch.utils.data.SequentialSampler(test_dataset)
+test_batch_sampler = torch.utils.data.BatchSampler(test_sampler, 2, drop_last=True)
+test_data_loader = torch.utils.data.DataLoader(
+    test_dataset, batch_sampler=test_batch_sampler,
+    collate_fn=geo_data_collate_fn
+)
 
-# test_data_loader = torch.utils.data.DataLoader(
-#     test_dataset, batch_size=2, collate_fn=geo_data_collate_fn, shuffle=False
-# )
+test_data_loader = torch.utils.data.DataLoader(
+    test_dataset, batch_size=2, collate_fn=geo_data_collate_fn, shuffle=False
+)
 
-all_classes = {0: 0, 1: 0, 2: 0}
-for i, batch in enumerate(train_data_loader):
+# all_classes = {0: 0, 1: 0, 2: 0}
+# for i, batch in enumerate(train_data_loader):
     
-    for targets_geo in batch["targets_geo"]:
-        if targets_geo["pl_rels"] != None:
-            counts = targets_geo["pl_rels"].unique(return_counts=True)[1].tolist()
-            for i, c in enumerate(counts):
-                all_classes[i] += c
+#     for targets_geo in batch["targets_geo"]:
+#         if targets_geo["pl_rels"] != None:
+#             counts = targets_geo["pl_rels"].unique(return_counts=True)[1].tolist()
+#             for i, c in enumerate(counts):
+#                 all_classes[i] += c
 
-print(all_classes)
+# print(all_classes)

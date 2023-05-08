@@ -24,10 +24,10 @@ print(args)
 with open(MAIN_PATH / args.test_annot_path, 'rb') as file:
     contents = json.load(file)
 
-start = False
+start = True
 for key, value in contents.items():
-    if key == "1601":
-        start = True
+    # if key == "1601":
+    #     start = True
     
     if start:
         points = value["geos"]["points"]

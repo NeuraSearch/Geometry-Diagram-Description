@@ -68,8 +68,20 @@ class GEODataset(torch.utils.data.Dataset):
         # symbol有可能有文字(text)描述, text描述对应的类型 -> idx
         self.class_text_to_ind = dict(zip(GEODataset.CLASSES_TEXT, range(len(GEODataset.CLASSES_TEXT))))
 
-        with open(MAIN_PATH / ann_file, 'rb') as file:
-            self.contents = json.load(file)
+        if self.cfg.use_all_data and is_train:
+            assert self.cfg.dataset_name == "PGDP5K"
+            with open(MAIN_PATH / self.cfg.train_annot_path, 'rb') as file:
+                self.contents = json.load(file)
+                print(f"Train Size: {len(self.contents)}")
+            with open(MAIN_PATH / self.cfg.eval_annot_path, 'rb') as file:
+                self.contents.update(json.load(file))
+                print(f"Train+Eval Size: {len(self.contents)}")
+            with open(MAIN_PATH / self.cfg.test_annot_path, 'rb') as file:
+                self.contents.update(json.load(file))
+                print(f"Train+Eval+Test Size: {len(self.contents)}")
+        else:
+            with open(MAIN_PATH / ann_file, 'rb') as file:
+                self.contents = json.load(file)
         for key in self.contents.keys():
             self.ids.append(key)
           
@@ -81,7 +93,6 @@ class GEODataset(torch.utils.data.Dataset):
         # 1. 取得标注信息
         img_id = self.ids[index]
         annot_each = self.contents[img_id]
-
         if self.cfg.dataset_name == "PGDP5K":
             # Samples without non-geometric primitives do not participate in the training
             while self.is_train and len(annot_each['symbols'])==0:
@@ -91,7 +102,10 @@ class GEODataset(torch.utils.data.Dataset):
 
         # 2. 打开图片
         if self.cfg.dataset_name == "PGDP5K":
-            img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), annot_each['file_name'])).convert("RGB")
+            if self.cfg.use_all_data and self.is_train:
+                img_org = Image.open(os.path.join(str(MAIN_PATH / self.cfg.all_img_path), annot_each['file_name'])).convert("RGB")
+            else:
+                img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), annot_each['file_name'])).convert("RGB")
         elif self.cfg.dataset_name == "UniGeo":
             img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), f"{img_id}.png")).convert("RGB")
         else:
@@ -369,7 +383,14 @@ class GEODataset(torch.utils.data.Dataset):
             if geo_b[0] == "l":
                 l_idx = int(geo_b[1:])
                 if rel == "endpoint":
-                    pl_rels[p_idx, l_idx] = 1.
+                    try:
+                        pl_rels[p_idx, l_idx] = 1.
+                    except Exception as e:
+                        print("annot_each: ", annot_each)
+                        print("p_idx: ", p_idx)
+                        print("l_idx: ", l_idx)
+                        print("rel_list: ", rel_list)
+                        exit()
                 elif rel == "online":
                     pl_rels[p_idx, l_idx] = 2.
                 else:

@@ -66,11 +66,18 @@ class GeoVectorHead(nn.Module):
            lines_ids = torch.LongTensor([1]).repeat(lines_num).to(geo_feature.device)
            embeddings = self.geo_embeddings(lines_ids)  # [N, geo_embed_size]
            locs = []
+           flag = False
            for line_info in loc_info:
+               if len(line_info) == 0:
+                   flag = True
+                   break
                line_info = [torch.FloatTensor(p) for p in line_info]
                locs.append(torch.cat(line_info))    # [4]
-           locs = torch.stack(locs, dim=0).to(geo_feature.device)  # [N, 4]
-           spatial_embedding = self.line_spatial_embeddings(locs)  # [N, h]
+           if flag:
+               spatial_embedding = torch.zeros(lines_num, embeddings.size(1)).to(geo_feature.device)
+           else:
+               locs = torch.stack(locs, dim=0).to(geo_feature.device)  # [N, 4]
+               spatial_embedding = self.line_spatial_embeddings(locs)  # [N, h]
         elif geo_type == "circle":
            circles_num = geo_feature.size(0)
            circles_ids = torch.LongTensor([2]).repeat(circles_num).to(geo_feature.device)
