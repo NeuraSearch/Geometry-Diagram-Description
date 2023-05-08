@@ -135,17 +135,26 @@ class Equations:
         return exp
 
     def excuate_equation(self, exp, source_nums=None):
-
+        # exp:  ['g_minus', 'C_3', 'N_0', 'g_minus', 'V_0']
+        # source_nums:  [56.0]
+        # print("exp: ", exp)
+        # print("source_nums: ", source_nums)
+        # print("self.op_list: ", self.op_list)
         if source_nums is None:
             source_nums = self.exp_info['nums']
         vars = []
         idx = 0
         while idx < len(exp):
             op = exp[idx]
-            if op not in self.op_list:
+            # if op not in self.op_list:
+            if op not in self.call_op:
+                # print("op not in: ", op)
                 return None
             op_nums = self.op_num[op]
             if idx + op_nums >= len(exp):
+                # print("idx: ", idx)
+                # print("op_nums: ", op_nums)
+                # print("op: ", op)
                 return None
             excuate_nums = []
             for tmp in exp[idx + 1: idx + 1 + op_nums]:
@@ -156,10 +165,13 @@ class Equations:
                 elif tmp[0] == 'C' and int(tmp[-1]) < len(constant):
                     excuate_nums.append(constant[int(tmp[-1])])
                 else:
+                    # print("Here: ", tmp[0])
                     return None
             idx += op_nums + 1
             v = self.call_op[op](*excuate_nums)
             if v is None:
+                # print("excuate_nums: ", excuate_nums)
+                # print("op: ", op)
                 return None
             vars.append(v)
         return vars

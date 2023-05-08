@@ -5,6 +5,7 @@ import sys
 import time
 import math
 import torch
+from collections import defaultdict
 
 from .distributed_utils import MetricLogger, SmoothedValue, is_main_process, warmup_lr_scheduler, reduce_dict, all_gather
 from .geo_evaluation import GeoEvaluation
@@ -269,6 +270,8 @@ def evaluate_program(model, data_loader, device, tokenizer, cfg, save_dir, epoch
     
     geo_evaluator = GeoEvaluation()
     predictions = {}
+    all_data = defaultdict(list)
+    all_predictions = []
     for batch_data in metric_logger.log_every(data_loader, 10, header):
         input_ids = batch_data["input_ids"].to(device)
         attention_mask = batch_data["attention_mask"].to(device)
@@ -284,28 +287,19 @@ def evaluate_program(model, data_loader, device, tokenizer, cfg, save_dir, epoch
         for i, id_ in enumerate(images_id):
             assert id_ not in predictions
             predictions[id_] = {
-                "problems_types": batch_data["problems_types"],
-                "problem": batch_data["problem"],
-                "golden_program": batch_data["program"],
+                "problems_types": batch_data["problems_types"][i],
+                "problem": batch_data["problem"][i],
+                "golden_program": batch_data["program"][i],
                 "predict_program": outputs_program[i*cfg.beam_size : (i+1)*cfg.beam_size],
-                "numbers": batch_data["numbers"],
-                "choice_numbers": batch_data["choice_numbers"],
-                "label": batch_data["label"],
+                "numbers": batch_data["numbers"][i],
+                "choice_numbers": batch_data["choice_numbers"][i],
+                "label": batch_data["label"][i],
             }
         
-        geo_evaluator.geo_evaluation(
-            num_beam=cfg.beam_size,
-            batch_data=batch_data,
-            images_id=images_id,
-            target=batch_data["program"],
-            pred=outputs_program,
-            source_nums=batch_data["numbers"],
-            choice_nums=batch_data["choice_numbers"],
-            label=batch_data["label"], 
-            problem_form=[cfg.problem_form for _ in range(len(images_id))],
-            problem_type=batch_data["problems_types"],
-            metric_logger=metric_logger,
-        )
+        for key, val in batch_data.items():
+            if key in ["images_id", "problems_types", "problem", "program", "numbers", "choice_numbers", "label"]:
+                all_data[key].extend(val)
+        all_predictions.extend(outputs_program)
         
         if device != torch.device("cpu"):
             torch.cuda.synchronize(device)
@@ -313,6 +307,20 @@ def evaluate_program(model, data_loader, device, tokenizer, cfg, save_dir, epoch
         model_time = time.time() - model_time
         metric_logger.update(model_time=model_time)
     
+    geo_evaluator.geo_evaluation(
+        num_beam=cfg.beam_size,
+        batch_data=all_data,
+        images_id=all_data["images_id"],
+        target=all_data["program"],
+        pred=all_predictions,
+        source_nums=all_data["numbers"],
+        choice_nums=all_data["choice_numbers"],
+        label=all_data["label"], 
+        problem_form=[cfg.problem_form for _ in range(len(all_data["images_id"]))],
+        problem_type=all_data["problems_types"],
+        metric_logger=metric_logger,
+    )
+
     metric_logger.synchronize_between_processes()
     print("Averaged stats: ", metric_logger)
     

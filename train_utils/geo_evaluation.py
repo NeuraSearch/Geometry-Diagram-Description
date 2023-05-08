@@ -168,6 +168,9 @@ class GeoEvaluation:
             hypo = top_k_predictions[i].split()
             try:
                 res = _equ.excuate_equation(hypo, source_nums)
+                # print("res: ", res)
+                # print("choice_nums: ", choice_nums)
+                # print()
             except:
                 res = None
 
