@@ -1,11 +1,11 @@
 main_args:
   is_train: True
-  use_all_data: True
+  use_all_data: False
   all_img_path: "data/PGDP5K/all_img"
-  dataset_name: "PGDP5K"
-  project_name: "v2.4_train_rel"
+  dataset_name: "UniGeo"
+  project_name: "v2.4_train_generator"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
-  resume: "archie_west_best/best.pth"
+  resume: null
   save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
   eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
@@ -23,8 +23,8 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  wandb_key: null
+  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  # wandb_key: null
   epochs: 100
   warmpup: False
   toy_data: False
@@ -91,22 +91,22 @@ rel_args:
   weak_mask: 0.55
   threshold: 0.5
 solution_generation_data_args:
-  t5_train_img_per_batch: 8
-  t5_test_img_per_batch: 8
-  t5_train_img_path: "data/UniGeo/images_unigeo_cal"
-  t5_eval_img_path: "data/UniGeo/images_unigeo_cal"
-  t5_test_img_path: "data/UniGeo/images_unigeo_cal"
-  t5_train_annot_path: "data/UniGeo/UniGeo_CAL_train.json" 
-  t5_eval_annot_path: "data/UniGeo/UniGeo_CAL_val.json" 
-  t5_test_annot_path: "data/UniGeo/UniGeo_CAL_test.json"
-  t5_train_parse_path: "data/UniGeo/UniGeo_CAL_parse_train.json"
-  t5_eval_parse_path: "data/UniGeo/UniGeo_CAL_parse_val.json"
-  t5_test_parse_path: "data/UniGeo/UniGeo_CAL_parse_test.json"
+  t5_train_img_per_batch: 10
+  t5_test_img_per_batch: 10
+  t5_train_img_path: "data/UniGeo/UniGeo/images_unigeo_cal"
+  t5_eval_img_path: "data/UniGeo/UniGeo/images_unigeo_cal"
+  t5_test_img_path: "data/UniGeo/UniGeo/images_unigeo_cal"
+  t5_train_annot_path: "data/UniGeo/UniGeo/UniGeo_CAL_train.json" 
+  t5_eval_annot_path: "data/UniGeo/UniGeo/UniGeo_CAL_val.json" 
+  t5_test_annot_path: "data/UniGeo/UniGeo/UniGeo_CAL_test.json"
+  t5_train_parse_path: "data/UniGeo/UniGeo/UniGeo_CAL_parse_train.json"
+  t5_eval_parse_path: "data/UniGeo/UniGeo/UniGeo_CAL_parse_val.json"
+  t5_test_parse_path: "data/UniGeo/UniGeo/UniGeo_CAL_parse_test.json"
   problem_form: "calculation"
 solution_generation_model_args:
   gp_resume: null
   model_type: "t5-base"
-  beam_size: 1
+  beam_size: 10
   t5_lr: 1.0e-4
   adam_eps: 1.0e-6
 test_args:
