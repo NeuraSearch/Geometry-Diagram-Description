@@ -74,7 +74,7 @@ def main(args):
     # create dataset
     print("Loading data")
     # we might update args.train_img_per_batch, args.test_img_per_batch
-    train_dataset, eval_dataset, test_dataset = make_data_loader_for_T5(args, is_train=args.is_train)
+    train_dataset, eval_dataset, test_dataset = make_data_loader_for_T5(args, is_train=args.is_train, dataset_name=args.dataset_name)
 
     # create sampler
     print("Creating data loaders")

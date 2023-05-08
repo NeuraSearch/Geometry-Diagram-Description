@@ -39,6 +39,10 @@ class GeoEvaluation:
         self.calculation_no_result = AverageMeter()
         self.proving_acc = AverageMeter()
         self.proving_no_result = AverageMeter()
+        self.pgps9k_acc = AverageMeter()
+        self.pgps9k_no_result = AverageMeter()
+        self.geometry3k_acc = AverageMeter()
+        self.geometry3k_no_results = AverageMeter()
 
         self.cal_angle = AverageMeter()
         self.cal_length = AverageMeter()
@@ -106,8 +110,7 @@ class GeoEvaluation:
                     metric_logger.update(other=flag)
                     self.cal_other.update(flag)
 
-            else:
-                assert problem_form[b] == 'proving'
+            elif problem_form[b] == 'proving':
                 success = self.evaluate_proving(pred[b*num_beam:(b+1)*num_beam], target[b], num_beam)
                 if success is None:
                     assert img_id not in self.pro_wrong_predictions
@@ -148,6 +151,46 @@ class GeoEvaluation:
                     # The proportion problems are also related to triangle
                     metric_logger.update(triangle=flag)
                     self.prove_triangle.update(flag)
+
+            elif problem_form[b] == "pgps9k":
+                success = self.evaluate_proving(pred[b*num_beam:(b+1)*num_beam], target[b], num_beam)
+                if success is None:
+                    assert img_id not in self.pro_wrong_predictions
+                    self.pro_wrong_predictions[img_id] = {
+                        "problems_types": batch_data[b]["problems_types"],
+                        "problem": batch_data[b]["problem"],
+                        "golden_program": batch_data[b]["program"],
+                        "predict_program": pred[b*num_beam:(b+1)*num_beam],
+                    }
+                    metric_logger.update(pro_acc=0.0)
+                    metric_logger.update(pro_no_res=1.0)
+                    self.pgps9k_acc.update(0)
+                    self.pgps9k_no_result.update(1.0)
+                else:
+                    metric_logger.update(pro_acc=1.0)
+                    metric_logger.update(pro_no_res=0.0)   
+                    self.pgps9k_acc.update(1.0)
+                    self.pgps9k_no_result.update(0)
+            
+            elif problem_form[b] == "geometry3k":
+                success = self.evaluate_proving(pred[b*num_beam:(b+1)*num_beam], target[b], num_beam)
+                if success is None:
+                    assert img_id not in self.pro_wrong_predictions
+                    self.pro_wrong_predictions[img_id] = {
+                        "problems_types": batch_data[b]["problems_types"],
+                        "problem": batch_data[b]["problem"],
+                        "golden_program": batch_data[b]["program"],
+                        "predict_program": pred[b*num_beam:(b+1)*num_beam],
+                    }
+                    metric_logger.update(pro_acc=0.0)
+                    metric_logger.update(pro_no_res=1.0)
+                    self.geometry3k_acc.update(0)
+                    self.geometry3k_no_result.update(1.0)
+                else:
+                    metric_logger.update(pro_acc=1.0)
+                    metric_logger.update(pro_no_res=0.0)   
+                    self.geometry3k_acc.update(1.0)
+                    self.geometry3k_no_result.update(0)
 
     def save(self, save_dir, epoch=None):
         if len(self.cal_wrong_predictions) != 0:

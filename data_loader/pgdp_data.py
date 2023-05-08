@@ -108,6 +108,12 @@ class GEODataset(torch.utils.data.Dataset):
                 img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), annot_each['file_name'])).convert("RGB")
         elif self.cfg.dataset_name == "UniGeo":
             img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), f"{img_id}.png")).convert("RGB")
+        elif self.cfg.dataset_name == "pgps9k":
+            img_name = annot_each["diagram"]
+            img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), img_name)).convert("RGB")
+        elif self.cfg.dataset_name == "geometry3k":
+            img_name = annot_each["diagram"]
+            img_org = Image.open(os.path.join(str(MAIN_PATH / self.img_root), img_name)).convert("RGB")
         else:
             raise ValueError(f"Unsupport dataset: {self.cfg.dataset_name}")
         

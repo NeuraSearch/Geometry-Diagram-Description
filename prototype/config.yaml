@@ -2,7 +2,7 @@ main_args:
   is_train: True
   use_all_data: False
   all_img_path: "data/PGDP5K/all_img"
-  dataset_name: "UniGeo"
+  dataset_name: "PGDP5K"  # PGDP5K, UniGeo, pgps9k, geometry3k
   project_name: "v2.4_train_generator"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
   resume: null
@@ -102,7 +102,7 @@ solution_generation_data_args:
   t5_train_parse_path: "data/UniGeo/UniGeo/UniGeo_CAL_parse_train.json"
   t5_eval_parse_path: "data/UniGeo/UniGeo/UniGeo_CAL_parse_val.json"
   t5_test_parse_path: "data/UniGeo/UniGeo/UniGeo_CAL_parse_test.json"
-  problem_form: "calculation"
+  problem_form: "calculation" # calculation, proving, pgps9k, geometry3k
 solution_generation_model_args:
   gp_resume: null
   model_type: "t5-base"

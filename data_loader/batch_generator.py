@@ -9,6 +9,8 @@ sys.path.insert(0, str(MAIN_PATH))
 from . import transforms as T
 from .pgdp_data import GEODataset
 from .unigeo_data import UniGeoDataset
+from .pgps9k_data import PGPS9KDataset
+from .geometry3k_data import Geometry3KDataset
 
 from train_utils import get_world_size
 from image_structure import to_image_list
@@ -110,7 +112,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
     
     return train_dataset, eval_dataset, test_dataset
 
-def make_data_loader_for_T5(cfg, is_train=True, is_distributed=False, start_iter=0):
+def make_data_loader_for_T5(cfg, is_train=True, is_distributed=False, start_iter=0, dataset_name="UniGeo"):
     num_gpus = get_world_size()
     if is_train:
         images_per_batch = cfg.t5_train_img_per_batch
@@ -158,32 +160,90 @@ def make_data_loader_for_T5(cfg, is_train=True, is_distributed=False, start_iter
     eval_dataset = None
     test_dataset = None
     if is_train:
-        train_dataset = UniGeoDataset(
-            root=cfg.t5_train_img_path,
-            ann_file=cfg.t5_train_annot_path,
-            parse_file=cfg.t5_train_parse_path,
-            transforms=transforms,
-            is_train=True,
-            cfg=cfg,
-        )
-        eval_dataset = UniGeoDataset(
-            root=cfg.t5_eval_img_path,
-            ann_file=cfg.t5_eval_annot_path,
-            parse_file=cfg.t5_eval_parse_path,
-            transforms=transforms,
-            is_train=False,
-            cfg=cfg,
-        )
+        if dataset_name == "UniGeo":
+            train_dataset = UniGeoDataset(
+                root=cfg.t5_train_img_path,
+                ann_file=cfg.t5_train_annot_path,
+                parse_file=cfg.t5_train_parse_path,
+                transforms=transforms,
+                is_train=True,
+                cfg=cfg,
+            )
+            eval_dataset = UniGeoDataset(
+                root=cfg.t5_eval_img_path,
+                ann_file=cfg.t5_eval_annot_path,
+                parse_file=cfg.t5_eval_parse_path,
+                transforms=transforms,
+                is_train=False,
+                cfg=cfg,
+            )
+        elif dataset_name == "PGPS9K":
+            train_dataset = PGPS9KDataset(
+                root=cfg.t5_train_img_path,
+                ann_file=cfg.t5_train_annot_path,
+                parse_file=cfg.t5_train_parse_path,
+                transforms=transforms,
+                is_train=True,
+                cfg=cfg,
+            )
+            eval_dataset = PGPS9KDataset(
+                root=cfg.t5_eval_img_path,
+                ann_file=cfg.t5_eval_annot_path,
+                parse_file=cfg.t5_eval_parse_path,
+                transforms=transforms,
+                is_train=False,
+                cfg=cfg,
+            )
+        elif dataset_name == "geometry3k":
+            train_dataset = Geometry3KDataset(
+                root=cfg.t5_train_img_path,
+                ann_file=cfg.t5_train_annot_path,
+                parse_file=cfg.t5_train_parse_path,
+                transforms=transforms,
+                is_train=True,
+                cfg=cfg,
+            )
+            eval_dataset = Geometry3KDataset(
+                root=cfg.t5_eval_img_path,
+                ann_file=cfg.t5_eval_annot_path,
+                parse_file=cfg.t5_eval_parse_path,
+                transforms=transforms,
+                is_train=False,
+                cfg=cfg,
+            )
+        else:
+            raise ValueError(f"Unknown dataset: {dataset_name}")
     else:
-        eval_dataset = UniGeoDataset(
-            root=cfg.t5_test_img_path,
-            ann_file=cfg.t5_test_annot_path,
-            parse_file=cfg.t5_test_parse_path,
-            transforms=transforms,
-            is_train=False,
-            cfg=cfg,
-        )
-        
+        if dataset_name == "UniGeo":
+            test_dataset = UniGeoDataset(
+                root=cfg.t5_test_img_path,
+                ann_file=cfg.t5_test_annot_path,
+                parse_file=cfg.t5_test_parse_path,
+                transforms=transforms,
+                is_train=False,
+                cfg=cfg,
+            )
+        elif dataset_name == "PGPS9K":
+            test_dataset = PGPS9KDataset(
+                root=cfg.t5_test_img_path,
+                ann_file=cfg.t5_test_annot_path,
+                parse_file=cfg.t5_test_parse_path,
+                transforms=transforms,
+                is_train=False,
+                cfg=cfg,
+            )
+        elif dataset_name == "geometry3k":
+            test_dataset = PGPS9KDataset(
+                root=cfg.t5_test_img_path,
+                ann_file=cfg.t5_test_annot_path,
+                parse_file=cfg.t5_test_parse_path,
+                transforms=transforms,
+                is_train=False,
+                cfg=cfg,
+            )
+        else:
+            raise ValueError(f"Unknown dataset: {dataset_name}")
+    
     return train_dataset, eval_dataset, test_dataset
 
 def geo_data_collate_fn(datas_list):
