@@ -19,8 +19,8 @@ class TransformerProgramGenerator(nn.Module):
         
         self.cfg = cfg
         
-        # self.t5_model = T5ForConditionalGeneration.from_pretrained(cfg.model_type)
-        self.t5_model = T5ForConditionalGeneration.from_pretrained(os.path.join(save_dir, "t5/t5"))
+        self.t5_model = T5ForConditionalGeneration.from_pretrained(cfg.model_type)
+        # self.t5_model = T5ForConditionalGeneration.from_pretrained(os.path.join(save_dir, "t5/t5"))
         
     def forward(self, input_ids, attention_mask, target_ids=None):
         

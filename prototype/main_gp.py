@@ -97,10 +97,10 @@ def main(args):
         train_batch_sampler = torch.utils.data.BatchSampler(
             train_sampler, args.t5_train_img_per_batch, drop_last=True)
 
-    from transformers import PreTrainedTokenizerFast
-    tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join("/".join(save_dir.split("/")[:-1]), "t5/t5/tokenizer.json"))
-    tokenizer.pad_token_id = 0
-    # tokenizer = T5Tokenizer.from_pretrained(args.model_type)
+    # from transformers import PreTrainedTokenizerFast
+    # tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join("/".join(save_dir.split("/")[:-1]), "t5/t5/tokenizer.json"))
+    # tokenizer.pad_token_id = 0
+    tokenizer = T5Tokenizer.from_pretrained(args.model_type)
     unigeo_data_collate_fn_func = partial(unigeo_data_collate_fn, tokenizer=tokenizer)
     if args.is_train:
         # create data loader
