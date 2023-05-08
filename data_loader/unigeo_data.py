@@ -49,8 +49,8 @@ class UniGeoDataset(torch.utils.data.Dataset):
             elif (type(des) == list) and (len(des) != 0):
                 diagram_description = diagram_description + " ".join(des) + " "
                 
-        problem_type = diagram_description + annot_each["p_type"]
-        problem = annot_each["problem"]
+        problem_type = annot_each["p_type"]
+        problem = diagram_description + annot_each["problem"]
         program = annot_each["program"]
         numbers = annot_each["numbers"]
         choice_numbers = annot_each["choice_numbers"]
