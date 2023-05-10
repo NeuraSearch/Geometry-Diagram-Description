@@ -115,9 +115,9 @@ class GeoEvaluation:
                 if success is None:
                     assert img_id not in self.pro_wrong_predictions
                     self.pro_wrong_predictions[img_id] = {
-                        "problems_types": batch_data[b]["problems_types"],
-                        "problem": batch_data[b]["problem"],
-                        "golden_program": batch_data[b]["program"],
+                        "problems_types": batch_data["problems_types"][b],
+                        "problem": batch_data["problem"][b],
+                        "golden_program": batch_data["program"][b],
                         "predict_program": pred[b*num_beam:(b+1)*num_beam],
                     }
                     metric_logger.update(pro_acc=0.0)
@@ -157,9 +157,9 @@ class GeoEvaluation:
                 if success is None:
                     assert img_id not in self.pro_wrong_predictions
                     self.pro_wrong_predictions[img_id] = {
-                        "problems_types": batch_data[b]["problems_types"],
-                        "problem": batch_data[b]["problem"],
-                        "golden_program": batch_data[b]["program"],
+                        "problems_types": batch_data["problems_types"][b],
+                        "problem": batch_data["problem"][b],
+                        "golden_program": batch_data["program"][b],
                         "predict_program": pred[b*num_beam:(b+1)*num_beam],
                     }
                     metric_logger.update(pro_acc=0.0)
@@ -177,9 +177,9 @@ class GeoEvaluation:
                 if success is None:
                     assert img_id not in self.pro_wrong_predictions
                     self.pro_wrong_predictions[img_id] = {
-                        "problems_types": batch_data[b]["problems_types"],
-                        "problem": batch_data[b]["problem"],
-                        "golden_program": batch_data[b]["program"],
+                        "problems_types": batch_data["problems_types"][b],
+                        "problem": batch_data["problem"][b],
+                        "golden_program": batch_data["program"][b],
                         "predict_program": pred[b*num_beam:(b+1)*num_beam],
                     }
                     metric_logger.update(pro_acc=0.0)

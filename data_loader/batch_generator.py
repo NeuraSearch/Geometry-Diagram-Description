@@ -177,7 +177,7 @@ def make_data_loader_for_T5(cfg, is_train=True, is_distributed=False, start_iter
                 is_train=False,
                 cfg=cfg,
             )
-        elif dataset_name == "PGPS9K":
+        elif dataset_name == "pgps9k":
             train_dataset = PGPS9KDataset(
                 root=cfg.t5_train_img_path,
                 ann_file=cfg.t5_train_annot_path,
@@ -223,7 +223,7 @@ def make_data_loader_for_T5(cfg, is_train=True, is_distributed=False, start_iter
                 is_train=False,
                 cfg=cfg,
             )
-        elif dataset_name == "PGPS9K":
+        elif dataset_name == "pgps9k":
             test_dataset = PGPS9KDataset(
                 root=cfg.t5_test_img_path,
                 ann_file=cfg.t5_test_annot_path,
