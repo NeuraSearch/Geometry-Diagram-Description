@@ -322,7 +322,9 @@ def evaluate_program(model, data_loader, device, tokenizer, cfg, save_dir, epoch
     )
 
     metric_logger.synchronize_between_processes()
-    print("Averaged stats: ", metric_logger)
+    # print("Averaged stats: ", metric_logger)
+    if is_main_process():   # actually redudant check, self.logger wll not be created on non-main process
+        logger.info(metric_logger)
     
     if is_main_process():
         geo_evaluator.save(save_dir, epoch)

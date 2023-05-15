@@ -67,7 +67,7 @@ def main(args):
     # wandb
     if is_main_process() and args.wandb_key != None:
         wandb.login(key=args.wandb_key)
-        run = wandb.init(name=f"{now}", project=f"{args.project_name}", config=args)
+        run = wandb.init(name=f"{args.item_name}", project=f"{args.project_name}", config=args)
     else:
         run = None
 
@@ -147,7 +147,7 @@ def main(args):
     
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
     
-    lr_scheduler = get_linear_schedule_with_warmup(optimizer, 1000, args.epochs * len(data_loader_train) // args.t5_train_img_per_batch)
+    lr_scheduler = get_linear_schedule_with_warmup(optimizer, 0, args.epochs * len(data_loader_train) // args.t5_train_img_per_batch)
     
     args.start_epoch = 0
     if args.gp_resume:

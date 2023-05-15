@@ -2,20 +2,21 @@ main_args:
   is_train: True
   use_all_data: False
   all_img_path: "data/PGDP5K/all_img"
-  dataset_name: "pgps9k"  # PGDP5K, UniGeo, pgps9k, geometry3k
-  project_name: "v2.4_train_generator"
+  dataset_name: "UniGeo"  # PGDP5K, UniGeo, pgps9k, geometry3k
+  project_name: "v2.8_train_rel"
+  item_name: "UniGeo_Cal_1e-4"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
   resume: "best_rel/best.pth"
   save_dir: "checkpoints"
   train_annot_path: "data/PGDP5K/annotations/train_revised.json"
   eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
-  test_annot_path: "data/PGPS9K_all/Geometry3K/train.json"
+  test_annot_path: "data/PGPS9K_all/Geometry3K/test.json"
   train_img_path: "data/PGDP5K/train"
   eval_img_path: "data/PGDP5K/val"
   test_img_path: "data/PGPS9K_all/Diagram"
   aspect_ratio_group_factor: 3
-  train_img_per_batch: 20
-  test_img_per_batch: 20
+  train_img_per_batch: 6
+  test_img_per_batch: 6
   workers: 8
   dist_url: "env://"
   sync_bn: True
@@ -23,8 +24,8 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  wandb_key: null
+  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  # wandb_key: null
   epochs: 100
   warmpup: False
   toy_data: False
@@ -33,14 +34,14 @@ main_args:
   #    True           False    >> fix seg_det, train rel
   #    False          True     >> train seg_det, no rel
   #    False          False    >> normal 
-  only_train_rel: True
+  only_train_rel: False
   only_parse: False
 optimizer_args:
-  optimization_method: "sgd"
+  optimization_method: "adam"
   momentum: 0.9
   weight_decay: 0.0005
   weight_decay_bias: 0
-  lr: 1.0e-5
+  lr: 1.0e-6
   bias_factor: 2
   lr_steps: [5, 10, 15]
   lr_gamma: 0.2
@@ -96,13 +97,13 @@ solution_generation_data_args:
   t5_train_img_path: "data/PGPS9K_all/PGPS9K/images_unigeo_cal"
   t5_eval_img_path: "data/PGPS9K_all/PGPS9K/images_unigeo_cal"
   t5_test_img_path: "data/PGPS9K_all/PGPS9K/images_unigeo_cal"
-  t5_train_annot_path: "data/PGPS9K_all/PGPS9K/train.json" 
-  t5_eval_annot_path: "data/PGPS9K_all/PGPS9K/test.json" 
-  t5_test_annot_path: "data/PGPS9K_all/PGPS9K/test.json"
-  t5_train_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_train.json"
-  t5_eval_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_test.json"
-  t5_test_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_test.json"
-  problem_form: "pgps9k" # calculation, proving, pgps9k, geometry3k
+  t5_train_annot_path: "data/UniGeo/UniGeo_CAL_train.json" 
+  t5_eval_annot_path: "data/UniGeo/UniGeo_CAL_val.json" 
+  t5_test_annot_path: "data/UniGeo/UniGeo_CAL_test.json"
+  t5_train_parse_path: "data/UniGeo/UniGeo_CAL_parse_train.json"
+  t5_eval_parse_path: "data/UniGeo/UniGeo_CAL_parse_val.json"
+  t5_test_parse_path: "data/UniGeo/UniGeo_CAL_parse_test.json"
+  problem_form: "calculation" # calculation, proving, pgps9k, geometry3k
 solution_generation_model_args:
   gp_resume: null
   model_type: "t5-base"

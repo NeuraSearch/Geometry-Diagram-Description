@@ -166,7 +166,7 @@ class MetricLogger(object):
         for name, meter in self.meters.items():
             loss_str.append(
                 f"{name}: {str(meter)}"
-            )
+            )            
         return self.delimeter.join(loss_str)
     
     def synchronize_between_processes(self):
@@ -340,7 +340,7 @@ def build_optmizer(cfg, model):
         
         lr = cfg.lr
         if key.startswith(prefix) or key.startswith(prefix_2):
-            lr = 1e-4
+            lr = 1e-3
         weight_decay = cfg.weight_decay     # the weight regularization terms
         if "bias" in key:
             lr = lr * cfg.bias_factor

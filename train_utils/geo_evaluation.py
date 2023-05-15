@@ -144,7 +144,7 @@ class GeoEvaluation:
                     metric_logger.update(congruent=flag)
                     self.prove_congruent.update(flag)
                 elif problem_type[b] == 'similarity':
-                    self.prove_congruent.update(similarity=flag)
+                    metric_logger.update(similarity=flag)
                     self.prove_similarity.update(flag)
                 else:
                     assert problem_type[b] == 'proportions'
