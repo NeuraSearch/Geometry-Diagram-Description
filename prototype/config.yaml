@@ -1,5 +1,5 @@
 main_args:
-  is_train: True
+  is_train: False
   use_all_data: False
   all_img_path: "data/PGDP5K/all_img"
   dataset_name: "UniGeo"  # PGDP5K, UniGeo, pgps9k, geometry3k
@@ -24,8 +24,8 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  # wandb_key: null
+  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  wandb_key: null
   epochs: 100
   warmpup: False
   toy_data: False
@@ -105,9 +105,10 @@ solution_generation_data_args:
   t5_test_parse_path: "data/UniGeo/UniGeo_CAL_parse_test.json"
   problem_form: "calculation" # calculation, proving, pgps9k, geometry3k
 solution_generation_model_args:
-  gp_resume: null
+  gp_resume: "cal/best.pth"
   model_type: "t5-base"
   beam_size: 10
+  top_n: 1
   t5_lr: 1.0e-4
   adam_eps: 1.0e-6
 test_args:

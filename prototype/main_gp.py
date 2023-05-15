@@ -147,19 +147,29 @@ def main(args):
     
     scaler = torch.cuda.amp.GradScaler() if args.amp else None
     
-    lr_scheduler = get_linear_schedule_with_warmup(optimizer, 0, args.epochs * len(data_loader_train) // args.t5_train_img_per_batch)
+    if args.is_train:
+        lr_scheduler = get_linear_schedule_with_warmup(optimizer, 0, args.epochs * len(data_loader_train) * 1000 // args.t5_train_img_per_batch)
     
     args.start_epoch = 0
     if args.gp_resume:
         print(f"Restore model from {os.path.join(str(MAIN_PATH / args.save_dir), args.gp_resume)}")
         checkpoint = torch.load(os.path.join(str(MAIN_PATH / args.save_dir), args.gp_resume), map_location="cpu")
-                
+        
         model_without_ddp.load_state_dict(checkpoint["model"])
-        optimizer.load_state_dict(checkpoint["optimizer"])
-        lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
-        args.start_epoch = checkpoint["epoch"] + 1
-        if args.amp and "scaler" in checkpoint:
-            scaler.load_state_dict(checkpoint["scaler"])
+        if args.is_train:
+            optimizer.load_state_dict(checkpoint["optimizer"])
+            lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+            args.start_epoch = checkpoint["epoch"] + 1
+            if args.amp and "scaler" in checkpoint:
+                scaler.load_state_dict(checkpoint["scaler"])
+
+    if not args.is_train:
+        predictions = evaluate_program(model, data_loader_test, device=device, tokenizer=tokenizer, cfg=args, save_dir=save_dir, epoch=0, logger=logger)
+        os.makedirs(save_dir, exist_ok=True)
+        save_file_name = f"not_train_{results_file}.json"
+        with codecs.open(save_file_name, "w", "utf-8") as file:
+            json.dump(predictions, file, indent=2)
+        return
 
     train_loss = []
     learning_rate = []

@@ -59,14 +59,14 @@ class GeoEvaluation:
 
     def geo_evaluation(self, num_beam, batch_data, images_id, target, pred,
                         source_nums, choice_nums, label, problem_form, problem_type,
-                        metric_logger):
+                        metric_logger, top_n):
 
         batch_size = len(source_nums)
 
         for b in range(batch_size):
             img_id = images_id[b]
             if problem_form[b] == 'calculation':
-                choice = self.evaluate_calculation(pred[b*num_beam:(b+1)*num_beam], choice_nums[b], source_nums[b], target[b], num_beam, label[b])
+                choice = self.evaluate_calculation(pred[b*num_beam:(b+1)*num_beam], choice_nums[b], source_nums[b], target[b], top_n, label[b])
                 if choice is None:
                     assert img_id not in self.cal_wrong_predictions
                     self.cal_wrong_predictions[img_id] = {
@@ -111,7 +111,7 @@ class GeoEvaluation:
                     self.cal_other.update(flag)
 
             elif problem_form[b] == 'proving':
-                success = self.evaluate_proving(pred[b*num_beam:(b+1)*num_beam], target[b], num_beam)
+                success = self.evaluate_proving(pred[b*num_beam:(b+1)*num_beam], target[b], top_n)
                 if success is None:
                     assert img_id not in self.pro_wrong_predictions
                     self.pro_wrong_predictions[img_id] = {

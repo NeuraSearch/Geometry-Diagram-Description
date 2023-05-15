@@ -319,6 +319,7 @@ def evaluate_program(model, data_loader, device, tokenizer, cfg, save_dir, epoch
         problem_form=[cfg.problem_form for _ in range(len(all_data["images_id"]))],
         problem_type=all_data["problems_types"],
         metric_logger=metric_logger,
+        top_n=cfg.top_n,
     )
 
     metric_logger.synchronize_between_processes()
