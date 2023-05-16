@@ -42,7 +42,7 @@ class GeoEvaluation:
         self.pgps9k_acc = AverageMeter()
         self.pgps9k_no_result = AverageMeter()
         self.geometry3k_acc = AverageMeter()
-        self.geometry3k_no_results = AverageMeter()
+        self.geometry3k_no_result = AverageMeter()
 
         self.cal_angle = AverageMeter()
         self.cal_length = AverageMeter()
