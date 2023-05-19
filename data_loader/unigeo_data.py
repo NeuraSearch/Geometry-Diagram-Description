@@ -32,6 +32,8 @@ class UniGeoDataset(torch.utils.data.Dataset):
         if cfg.toy_data:
             self.ids = self.ids[:50]
         
+        self.enable_geo_rel = cfg.enable_geo_rel
+        
     def __getitem__(self, index):
         
         img_id = self.ids[index]
@@ -43,7 +45,10 @@ class UniGeoDataset(torch.utils.data.Dataset):
         # TODO: 在这里到时候加上Diagram Description的内容
         # process the "parse_each"
         diagram_description = ""
-        for _, des in parse_each.items():
+        for rel_name, des in parse_each.items():
+            if not self.enable_geo_rel:
+                if rel_name in ["points", "lines", "angle"]:
+                    continue
             if type(des) == str:
                 diagram_description = diagram_description + des + " "
             elif (type(des) == list) and (len(des) != 0):
