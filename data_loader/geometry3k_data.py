@@ -30,6 +30,7 @@ class Geometry3KDataset(torch.utils.data.Dataset):
             self.ids = self.ids[:50]
         
         self.enable_geo_rel = cfg.enable_geo_rel
+        self.cfg = cfg
     
     def __getitem__(self, index):
         
