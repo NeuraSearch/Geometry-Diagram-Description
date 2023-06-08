@@ -1,10 +1,10 @@
 main_args:
-  is_train: False
+  is_train: True
   use_all_data: False
   all_img_path: "data/PGDP5K/all_img"
-  dataset_name: "geometry3k"  # PGDP5K, UniGeo, pgps9k, geometry3k
-  project_name: "v2.8_train_rel"
-  item_name: "Geometry3K_Cal_1e-4"
+  dataset_name: "UniGeo"  # PGDP5K, UniGeo, pgps9k, geometry3k
+  project_name: "v3.0_train_rel"
+  item_name: "UniGeo_PRV_1e-4"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
   resume: "best_rel/best.pth"
   save_dir: "checkpoints"
@@ -24,8 +24,8 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  wandb_key: null
+  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  # wandb_key: null
   epochs: 100
   warmpup: False
   toy_data: False
@@ -97,19 +97,20 @@ solution_generation_data_args:
   t5_train_img_path: "data/PGPS9K_all/PGPS9K/images_unigeo_cal"
   t5_eval_img_path: "data/PGPS9K_all/PGPS9K/images_unigeo_cal"
   t5_test_img_path: "data/PGPS9K_all/PGPS9K/images_unigeo_cal"
-  t5_train_annot_path: "data/PGPS9K_all/Geometry3K/train.json" 
-  t5_eval_annot_path: "data/PGPS9K_all/Geometry3K/test.json" 
-  t5_test_annot_path: "data/PGPS9K_all/Geometry3K/test.json"
-  t5_train_parse_path: "data/PGPS9K_all/Geometry3K/Geometry3K_parse_train.json"
-  t5_eval_parse_path: "data/PGPS9K_all/Geometry3K/Geometry3K_parse_test.json"
-  t5_test_parse_path: "data/PGPS9K_all/Geometry3K/Geometry3K_parse_test.json"
-  problem_form: "geometry3k" # calculation, proving, pgps9k, geometry3k
+  t5_train_annot_path: "data/UniGeo/UniGeo/UniGeo_PRV_train.json" 
+  t5_eval_annot_path: "data/UniGeo/UniGeo/UniGeo_PRV_test.json" 
+  t5_test_annot_path: "data/UniGeo/UniGeo/UniGeo_PRV_test.json"
+  t5_train_parse_path: "data/UniGeo/UniGeo/UniGeo_PRV_parse_train.json"
+  t5_eval_parse_path: "data/UniGeo/UniGeo/UniGeo_PRV_parse_test.json"
+  t5_test_parse_path: "data/UniGeo/UniGeo/UniGeo_PRV_parse_test.json"
+  problem_form: "proving" # calculation, proving, pgps9k, geometry3k
 solution_generation_model_args:
-  gp_resume: "geometry3k/best.pth"
+  gp_resume: null
   model_type: "t5-base"
   beam_size: 10
   top_n: 10
   t5_lr: 1.0e-4
   adam_eps: 1.0e-6
 test_args:
-  enable_geo_rel: True
+  enable_geo_rel: False
+  enable_diagram_descirption: False

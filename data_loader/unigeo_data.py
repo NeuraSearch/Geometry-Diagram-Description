@@ -45,14 +45,15 @@ class UniGeoDataset(torch.utils.data.Dataset):
         # TODO: 在这里到时候加上Diagram Description的内容
         # process the "parse_each"
         diagram_description = ""
-        for rel_name, des in parse_each.items():
-            if not self.enable_geo_rel:
-                if rel_name in ["points", "lines", "angle"]:
-                    continue
-            if type(des) == str:
-                diagram_description = diagram_description + des + " "
-            elif (type(des) == list) and (len(des) != 0):
-                diagram_description = diagram_description + " ".join(des) + " "
+        if self.cfg.enable_diagram_descirption:
+            for rel_name, des in parse_each.items():
+                if not self.enable_geo_rel:
+                    if rel_name in ["points", "lines", "angle"]:
+                        continue
+                if type(des) == str:
+                    diagram_description = diagram_description + des + " "
+                elif (type(des) == list) and (len(des) != 0):
+                    diagram_description = diagram_description + " ".join(des) + " "
                 
         problem_type = annot_each["p_type"]
         problem = diagram_description + annot_each["problem"]

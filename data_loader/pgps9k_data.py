@@ -38,14 +38,15 @@ class PGPS9KDataset(torch.utils.data.Dataset):
         parse_each = self.parse_contents[img_id]
         
         diagram_description = ""
-        for rel_name, des in parse_each.items():
-            if not self.enable_geo_rel:
-                if rel_name in ["points", "lines", "angle"]:
-                    continue
-            if type(des) == str:
-                diagram_description = diagram_description + des + " "
-            elif (type(des) == list) and (len(des) != 0):
-                diagram_description = diagram_description + " ".join(des) + " "
+        if self.cfg.enable_diagram_descirption:
+            for rel_name, des in parse_each.items():
+                if not self.enable_geo_rel:
+                    if rel_name in ["points", "lines", "angle"]:
+                        continue
+                if type(des) == str:
+                    diagram_description = diagram_description + des + " "
+                elif (type(des) == list) and (len(des) != 0):
+                    diagram_description = diagram_description + " ".join(des) + " "
                 
         problem_type = annot_each["type"]
         problem = diagram_description + annot_each["text"]
