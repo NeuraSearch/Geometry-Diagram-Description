@@ -177,19 +177,19 @@ class GeoEvaluation:
                 if cat == "line":
                     metric_logger.update(line=flag)
                 if cat == "angle":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(angle=flag)
                 if cat == "triangle":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(triangle=flag)
                 if cat == "congruent":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(congruent=flag)
                 if cat == "similarity":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(similarity=flag)
                 if cat == "quadrilateral":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(quadrilateral=flag)
                 if cat == "circle":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(circle=flag)
                 if cat == "area":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(area=flag)
                              
             elif problem_form[b] == "geometry3k":
                 success = self.evaluate_proving(pred[b*num_beam:(b+1)*num_beam], target[b], num_beam)
@@ -216,19 +216,19 @@ class GeoEvaluation:
                 if cat == "line":
                     metric_logger.update(line=flag)
                 if cat == "angle":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(angle=flag)
                 if cat == "triangle":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(triangle=flag)
                 if cat == "congruent":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(congruent=flag)
                 if cat == "similarity":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(similarity=flag)
                 if cat == "quadrilateral":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(quadrilateral=flag)
                 if cat == "circle":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(circle=flag)
                 if cat == "area":
-                    metric_logger.update(line=flag)
+                    metric_logger.update(area=flag)
 
     def save(self, save_dir, epoch=None):
         if len(self.cal_wrong_predictions) != 0:
