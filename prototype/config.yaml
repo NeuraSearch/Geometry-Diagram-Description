@@ -1,5 +1,5 @@
 main_args:
-  is_train: True
+  is_train: False
   use_all_data: False
   all_img_path: "data/PGDP5K/all_img"
   dataset_name: "UniGeo"  # PGDP5K, UniGeo, pgps9k, geometry3k

@@ -171,7 +171,26 @@ class GeoEvaluation:
                     metric_logger.update(pro_no_res=0.0)   
                     self.pgps9k_acc.update(1.0)
                     self.pgps9k_no_result.update(0)
-            
+                
+                flag = 0 if success is None else 1.0
+                cat = category_assign_for_pgps9k_and_geometry3k(problem_type[b])
+                if cat == "line":
+                    metric_logger.update(line=flag)
+                if cat == "angle":
+                    metric_logger.update(line=flag)
+                if cat == "triangle":
+                    metric_logger.update(line=flag)
+                if cat == "congruent":
+                    metric_logger.update(line=flag)
+                if cat == "similarity":
+                    metric_logger.update(line=flag)
+                if cat == "quadrilateral":
+                    metric_logger.update(line=flag)
+                if cat == "circle":
+                    metric_logger.update(line=flag)
+                if cat == "area":
+                    metric_logger.update(line=flag)
+                             
             elif problem_form[b] == "geometry3k":
                 success = self.evaluate_proving(pred[b*num_beam:(b+1)*num_beam], target[b], num_beam)
                 if success is None:
@@ -191,6 +210,25 @@ class GeoEvaluation:
                     metric_logger.update(pro_no_res=0.0)   
                     self.geometry3k_acc.update(1.0)
                     self.geometry3k_no_result.update(0)
+
+                flag = 0 if success is None else 1.0
+                cat = category_assign_for_pgps9k_and_geometry3k(problem_type[b])
+                if cat == "line":
+                    metric_logger.update(line=flag)
+                if cat == "angle":
+                    metric_logger.update(line=flag)
+                if cat == "triangle":
+                    metric_logger.update(line=flag)
+                if cat == "congruent":
+                    metric_logger.update(line=flag)
+                if cat == "similarity":
+                    metric_logger.update(line=flag)
+                if cat == "quadrilateral":
+                    metric_logger.update(line=flag)
+                if cat == "circle":
+                    metric_logger.update(line=flag)
+                if cat == "area":
+                    metric_logger.update(line=flag)
 
     def save(self, save_dir, epoch=None):
         if len(self.cal_wrong_predictions) != 0:
@@ -241,3 +279,23 @@ class GeoEvaluation:
                 success = True
 
         return success
+
+def category_assign_for_pgps9k_and_geometry3k(problem_type):
+    if problem_type in ["Line Segment"]:
+        return "line"
+    elif problem_type in ["Angle", "Parallel Lines", "Angle Relation in Triangle", "Polygon Angle"]:
+        return "angle"
+    elif problem_type in ["Isosceles (Equilateral) Triangle", "Angle Bisector of Triangle", \
+        "Median of Triangle", "Midsegment of Triangle ", "Perpendicular Bisector of Triangle", \
+            "Geometric Mean", "Pythagorean Theorem", "Trigonometry"]:
+        return "triangle"
+    elif problem_type in ["Polygon Congruence"]:
+        return "congruent"
+    elif problem_type in ["Similarity in Parallel Line", "Polygon Similarity"]:
+        return "similarity"
+    elif problem_type in ["Parallelogram", "Rectangle", "Rhombus and Square", "Trapezoid and Kite"]:
+        return "quadrilateral"
+    elif problem_type in ["Circle Chord", "Arc Angle", "Tangent", "Inscribed Angle", "Secant Angle", "Secant Segment"]:
+        return "circle"
+    elif problem_type in ["Perimeter and Area of Triangle", "Perimeter and Area of Quadrangle", "Perimeter and Area of Polygon", "Circumference and Area of Circle
+        return "area"
