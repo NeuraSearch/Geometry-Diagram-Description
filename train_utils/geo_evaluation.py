@@ -297,5 +297,5 @@ def category_assign_for_pgps9k_and_geometry3k(problem_type):
         return "quadrilateral"
     elif problem_type in ["Circle Chord", "Arc Angle", "Tangent", "Inscribed Angle", "Secant Angle", "Secant Segment"]:
         return "circle"
-    elif problem_type in ["Perimeter and Area of Triangle", "Perimeter and Area of Quadrangle", "Perimeter and Area of Polygon", "Circumference and Area of Circle
+    elif problem_type in ["Perimeter and Area of Triangle", "Perimeter and Area of Quadrangle", "Perimeter and Area of Polygon", "Circumference and Area of Circle"]:
         return "area"
