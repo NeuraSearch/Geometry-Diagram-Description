@@ -1,3 +1,6 @@
+# Modified from "http://www.nlpr.ia.ac.cn/databases/CASIA-PGPS9K/"
+# the difference is that we convert the clause to the natural language description.
+
 from utils import *
 from itertools import combinations
 import json
@@ -42,7 +45,7 @@ def push_list_by_name(list_cur, name_list):
                 not item2 in list_cur[record_k]['name']:
                 list_cur[record_k]['name'].append(item)
 
-def get_normal_logic(list_cur, pre_seq, angle_com2sim_dict=None):
+def get_normal_logic(list_cur, pre_seq, angle_com2sim_dict=None, geo_type=None):
     """
         list_cur: [{'value':value, 'name':[name], 'loc': [x, y], 'is_arc_major': bool]}]
         pre_seq: ['l \\widehat ', 'm \\angle ', 'm \\widehat ']
@@ -58,26 +61,31 @@ def get_normal_logic(list_cur, pre_seq, angle_com2sim_dict=None):
             if pre_seq == 'm \\widehat ': pre_seq_new = 'm major \\widehat '
         for ind, name in enumerate(item['name']):
             if ind>0:
-                seq_each = seq_each + ' = '
+                temp = f" has the same {geo_type} with "
+                seq_each = seq_each + temp
             seq_each += pre_seq_new + name
             if not angle_com2sim_dict is None:
                 if name in angle_com2sim_dict:
-                    seq_each += " = " + pre_seq_new + angle_com2sim_dict[name]
+                    seq_each += f" has the same {geo_type} with " + pre_seq_new + angle_com2sim_dict[name]
                     angle_com2sim_dict[name] = ''
                 name_flat = name[-1]+name[1:-1]+name[0]
                 if name_flat in angle_com2sim_dict:
-                    seq_each += " = " + pre_seq_new + angle_com2sim_dict[name_flat]
+                    seq_each += f" has the same {geo_type} with " + pre_seq_new + angle_com2sim_dict[name_flat]
                     angle_com2sim_dict[name_flat] = ''
-
+                    
         if item['value']!='': 
-            seq_each += ' = ' + item['value']
+            # seq_each += ' = ' + item['value']
+            if len(seq_each.split(" ")) == 2:
+                seq_each += f" has the {geo_type} of " + item['value']
+            else:
+                seq_each += f", their {geo_type} is " + item['value']
 
         if seq_each!='': list_logic_form.append(seq_each)
 
     if not angle_com2sim_dict is None:
         for key, value in angle_com2sim_dict.items():
             if value!='':
-                seq_each = pre_seq+key+' = '+pre_seq+value
+                seq_each = pre_seq+key+f" has the same {geo_type} with "+pre_seq+value
                 list_logic_form.append(seq_each)
 
     return list_logic_form
@@ -189,9 +197,9 @@ def get_PointLiesOnLine(id2name_dict, line_dict, line_name, image_id):
             name_record.append(id2name_dict[item[0]])
         try:
             if len(line_name[id].split()[-1])==1: 
-                logic_form_each = line_name[id] + ' lieson ' + ' '.join(name_record)
+                logic_form_each = 'Point ' + line_name[id].replace("line ", "") + ' is on the line of ' + 'Line ' + ''.join(name_record)
             else:
-                logic_form_each = 'line ' + ' '.join(name_record)
+                logic_form_each = 'Line ' + ''.join(name_record)
         except:
             print(image_id, "error in PointLiesOnLine!")
             continue
@@ -220,7 +228,7 @@ def get_PointLiesOnCircle(elem_dict, id2name_dict, point2circle, circles, circle
         for item in circle_dict[id]: 
             name_record.append(id2name_dict[item[0]])
         try:
-            logic_form_each = "\\odot "+id2name_dict[id]+' lieson '+' '.join(name_record)
+            logic_form_each = "Point " + id2name_dict[id]+ ' is on the '+ 'Circle ' +  ''.join(name_record)
         except:
             print(image_id, "error in PointLiesOnLine!")
             continue
@@ -239,9 +247,9 @@ def get_Parallel(parallel, elem_dict, line_name, image_id):
     def get_logic_form(item_list):
         for index, item in enumerate(item_list):
             if index==0:
-                logic_form_each = line_name[item]
+                logic_form_each = "Line " + line_name[item]
             else:
-                logic_form_each += ' \\parallel ' + line_name[item]
+                logic_form_each += ' is parallel with ' + "Line " + line_name[item]
         list_Parallel2Line.append(logic_form_each)
 
         
@@ -275,7 +283,7 @@ def get_Perpendicular(id2name_dict, perpendicular, line_name, image_id):
         line1 = line_name[item[1][1]]
         line2 = line_name[item[1][2]]
         try:
-            logic_form_each = line1 + ' \\perp ' + line2 + ' on ' + cross_point 
+            logic_form_each = "Line " + line1 + ' is perpendicular with ' + 'Line ' + line2 + ' on ' + 'Point ' + cross_point 
         except:
             print(image_id, 'error in Perpendicular!')
             continue     
@@ -588,10 +596,10 @@ def get_logic_form(relation_each, elem_dict, image_id):
     get_Textangle(id2name_dict, textangle_each, 'angle', elem_dict, line_dict, \
                                             angle_com2sim_dict, angle_degree_list, arc_degree_list, image_id, head2sym_dict)
    
-    list_Linelen = get_normal_logic(line_len_list, pre_seq='')
-    list_Arclen = get_normal_logic(arc_len_list, pre_seq='l \\widehat ')
-    list_Angledeg = get_normal_logic(angle_degree_list, pre_seq='m \\angle ', angle_com2sim_dict=angle_com2sim_dict)
-    list_Arcdeg = get_normal_logic(arc_degree_list, pre_seq='m \\widehat ')
+    list_Linelen = get_normal_logic(line_len_list, pre_seq='Line ', geo_type="length")
+    list_Arclen = get_normal_logic(arc_len_list, pre_seq='Arc ', geo_type="lengtg")
+    list_Angledeg = get_normal_logic(angle_degree_list, pre_seq='Angle ', angle_com2sim_dict=angle_com2sim_dict, geo_type="degree")
+    list_Arcdeg = get_normal_logic(arc_degree_list, pre_seq='Arc ', geo_type="degree")
 
     stru_logic_forms = list_PointLiesOnLine+list_PointLiesOnCircle
     dup_stru_logic_forms = list(set(stru_logic_forms))
