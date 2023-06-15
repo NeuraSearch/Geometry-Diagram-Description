@@ -84,6 +84,7 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
     """
     
     results = []    # List[ Dict{}, Dict{}, ...]
+    predict_rel = []
     
     # describe the image in our own language
     for per_data_points, per_data_lines, per_data_circles in zip(points, lines, circles):
@@ -94,13 +95,20 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
         
         if len(per_data_lines) > 0:
             # print("haha")
-            primitives_info["lines"] = generate_for_lines(per_data_lines)
+            primitives_info["lines"], endpoints_res, onlines_res = generate_for_lines(per_data_lines)
         
         if len(per_data_circles) > 0:
-            primitives_info["circles"] = generate_for_circles(per_data_circles)
+            primitives_info["circles"], oncircles_res, center_res = generate_for_circles(per_data_circles)
         
         results.append(primitives_info)
-    
+        predict_rel.append(
+            {"endpoint_num": sum([len(endpoints) for endpoints in endpoints_res]) if len(per_data_lines) > 0 else 0,
+             "online_num": sum([len(onlines) for onlines in onlines_res]) if len(per_data_lines) > 0 else 0,
+             "center_num": sum([len(centers) for centers in center_res]) if len(per_data_circles) > 0 else 0,
+             "oncircle_num": sum([len(oncircles) for oncircles in oncircles_res]) if len(per_data_circles) > 0 else 0,
+            }
+        )
+        
     # generate for text_symbols
     for idx, per_data_result in enumerate(text_symbols_parse_results):
         if per_data_result == None:
@@ -118,7 +126,8 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
         # print("lines_res: ", lines_res)
         
         results[idx].update(per_data_text_symbol_nl)
-    
+        predict_rel[idx]["text_symbol_num"] = len(per_data_text_symbol_nl["angle"]) + len(per_data_text_symbol_nl["length"])
+        
     # print("results: ", results)
     # print("*"*100)
     # print()
@@ -128,27 +137,33 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
             continue
         per_data_other_symbol_nl = defaultdict(list)    # value: [] or [str, str, str]
         for sym_key, sym_val in per_data_result.items():
-            # print("sym_key: ", sym_key)
             if "angle" in sym_key:  # congruent angle
-                res = generate_for_congruent_angle(sym_val)
+                res, angles_name = generate_for_congruent_angle(sym_val)
                 if res != None:
                     per_data_other_symbol_nl["congruent_angle"].append(res)
-            
+                    predict_rel[idx][sym_key] = len(angles_name)
+                    
             elif "bar" in sym_key:  # congruent bar
-                res = generate_for_congruent_bar(sym_val)
+                res, lines_name = generate_for_congruent_bar(sym_val)
                 if res != None:
                     per_data_other_symbol_nl["congruent_line"].append(res)
+                    predict_rel[idx][sym_key] = len(lines_name)
                     
             elif "parallel" in sym_key: # parallel line
-                res = generate_for_parallel(sym_val)
+                res, lines_name = generate_for_parallel(sym_val)
                 if res != None:
                     per_data_other_symbol_nl["parallel"].append(res)
+                    predict_rel[idx][sym_key] = len(lines_name)
                 
             elif "perpendicular" in sym_key:    # perpendicular
                 res = generate_for_perpendicular(sym_val)
                 if res != None:
                     # here, res is either List[str, str, ...] or []
                     per_data_other_symbol_nl["perpendicular"] = res
+                    if sym_key not in predict_rel[idx]:
+                        predict_rel[idx][sym_key] = 1
+                    else:
+                        predict_rel[idx][sym_key] += 1
         
         # print("per_data_result: ", per_data_result)
         # print("per_data_other_symbol_nl: ", per_data_other_symbol_nl)
@@ -163,7 +178,7 @@ def convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_
     # print()
     # input()
     
-    return results
+    return results, predict_rel
 
 def generate_for_points(per_data_points):
     points_res = []
@@ -218,7 +233,7 @@ def generate_for_lines(per_data_lines):
     if res == "The digram contains ":
         res = ""
         
-    return res
+    return res, endpoints_res, onlines_res
 
 def generate_for_circles(per_data_circles):
     circles_res = []
@@ -262,7 +277,7 @@ def generate_for_circles(per_data_circles):
     
     if res == "The digram contains ":
         res = ""
-    return res
+    return res, oncircles_res, center_res
 
 def generate_for_text_symbols(per_data_result):
     
@@ -327,9 +342,9 @@ def generate_for_congruent_angle(sym_val):
         
         res = re.sub(r".and.$", "", res)
         
-        return res
+        return res, angles_name
     else:
-        return None
+        return None, None
 
 def generate_for_congruent_bar(sym_val):
     
@@ -351,9 +366,9 @@ def generate_for_congruent_bar(sym_val):
         
         res = re.sub(r".and.$", "", res)
         
-        return res
+        return res, lines_name
     else:
-        return None
+        return None, None
 
 def generate_for_parallel(sym_val):
 
@@ -372,9 +387,9 @@ def generate_for_parallel(sym_val):
         
         res = re.sub(r".and.$", "", res)
         
-        return res
+        return res, lines_name
     else:
-        return None
+        return None, None
 
 def generate_for_perpendicular(sym_val):
     

@@ -9,6 +9,7 @@ from collections import defaultdict
 
 from .distributed_utils import MetricLogger, SmoothedValue, is_main_process, warmup_lr_scheduler, reduce_dict, all_gather
 from .geo_evaluation import GeoEvaluation
+from .rel_evaluation import evaluate_rel
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
                     print_freq=50, warmup=False, scaler=None, run=None, logger=None):
@@ -116,6 +117,8 @@ def evaluate(model, data_loader, device, logger=None):
     # TODO: define the metric here, e.g., accuracy
     
     predictions = {}
+    all_predict_rels = {}
+    all_golden_rels = {}
     for batch_data in metric_logger.log_every(data_loader, 10, header):
         # "images": images,
         # "images_not_tensors": images_not_tensors,
@@ -145,6 +148,10 @@ def evaluate(model, data_loader, device, logger=None):
         
         images = images.to(device)
         
+        # for pgps9k rel evaluation
+        golden_rel_for_eval = batch_data["golden_rel_for_eval"]
+        all_golden_rels.update({img_id: golden_rel_for_eval[idx] for idx, img_id in enumerate(batch_data["images_id"])})
+        
         # we have to wait until everything has been done,
         # then we start to count
         if device != torch.device("cpu"):
@@ -154,9 +161,11 @@ def evaluate(model, data_loader, device, logger=None):
         outputs = model(images=images, images_not_tensor=images_not_tensor)
                 
         """ *** Customized Part *** """
-        natural_language_results = outputs
+        natural_language_results, predict_rel = outputs
         natural_language_results_with_id = {img_id: natural_language_results[idx] for idx, img_id in enumerate(batch_data["images_id"])}
+        predict_rel_with_id = {img_id: predict_rel[idx] for idx, img_id in enumerate(batch_data["images_id"])}
         gathered_natural_language_results = all_gather(natural_language_results_with_id)
+        gathered_predict_rel = all_gather(predict_rel_with_id)
         
         temp = {}
         for one_gpu_pred in gathered_natural_language_results:
@@ -164,6 +173,12 @@ def evaluate(model, data_loader, device, logger=None):
                 assert key not in temp, f"duplicate key: ({key})"
                 temp[key] = val
         predictions.update(temp)
+        temp = {}
+        for one_gpu_pred in gathered_predict_rel:
+            for key, val in one_gpu_pred.items():
+                assert key not in temp, f"duplicate key: ({key})"
+                temp[key] = val
+        all_predict_rels.update(temp)
         """ *** *** *** *** *** *** """
         
         # !!!: we uncomment the below line, so better wait here.
@@ -181,6 +196,10 @@ def evaluate(model, data_loader, device, logger=None):
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats: ", metric_logger)
+    
+    evaluate_rel(all_golden_rel=all_golden_rels, all_predict_rel=all_predict_rels, metric_logger=metric_logger)
+    if is_main_process():   # actually redudant check, self.logger wll not be created on non-main process
+        logger.info(metric_logger)
     
     return predictions
     

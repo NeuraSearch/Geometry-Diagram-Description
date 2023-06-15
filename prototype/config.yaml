@@ -1,22 +1,23 @@
 main_args:
   is_train: False
   use_all_data: False
-  all_img_path: "data/PGDP5K/all_img"
-  dataset_name: "UniGeo"  # PGDP5K, UniGeo, pgps9k, geometry3k
+  all_img_path: "data/PGPS9K_all/Diagram"
+  dataset_name: "pgps9k"  # PGDP5K, UniGeo, pgps9k, geometry3k
   project_name: "v3.0_train_rel"
   item_name: "UniGeo_PRV_1e-4"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
   resume: "best_rel/best.pth"
   save_dir: "checkpoints"
-  train_annot_path: "data/PGDP5K/annotations/train_revised.json"
-  eval_annot_path: "data/PGDP5K/annotations/val_revised.json"
-  test_annot_path: "data/PGPS9K_all/Geometry3K/test.json"
-  train_img_path: "data/PGDP5K/train"
-  eval_img_path: "data/PGDP5K/val"
+  train_annot_path: "data/PGPS9K_all/PGPS9K/train.json"
+  eval_annot_path: "data/PGPS9K_all/PGPS9K/train.json"
+  test_annot_path: "data/PGPS9K_all/PGPS9K/train.json"
+  train_img_path: "data/PGPS9K_all/Diagram"
+  eval_img_path: "data/PGPS9K_all/Diagram"
   test_img_path: "data/PGPS9K_all/Diagram"
+  diagram_annotation_path: "data/PGPS9K_all/diagram_annotation.json" # for rel evaluation, pgps9k
   aspect_ratio_group_factor: 3
-  train_img_per_batch: 6
-  test_img_per_batch: 6
+  train_img_per_batch: 10
+  test_img_per_batch: 10
   workers: 8
   dist_url: "env://"
   sync_bn: True
@@ -24,8 +25,8 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  # wandb_key: null
+  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  wandb_key: null
   epochs: 100
   warmpup: False
   toy_data: False
@@ -112,5 +113,5 @@ solution_generation_model_args:
   t5_lr: 1.0e-4
   adam_eps: 1.0e-6
 test_args:
-  enable_geo_rel: False
-  enable_diagram_descirption: False
+  enable_geo_rel: True
+  enable_diagram_descirption: True

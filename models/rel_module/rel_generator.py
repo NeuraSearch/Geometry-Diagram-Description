@@ -123,6 +123,6 @@ class RelGenerator(nn.Module):
             # print()
             # print("convert_parse_to_natural_language...")
             # print()
-            natural_language_results = convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_parse_results, points, lines, circles)
+            natural_language_results, predict_rel  = convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_parse_results, points, lines, circles)
 
-            return natural_language_results
+            return natural_language_results, predict_rel

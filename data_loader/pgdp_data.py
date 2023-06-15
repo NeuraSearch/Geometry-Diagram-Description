@@ -5,6 +5,7 @@ from pathlib import Path
 MAIN_PATH = Path(__file__).absolute().parent.parent
 sys.path.insert(0, str(MAIN_PATH))
 
+import re
 import os
 import json
 import torch
@@ -82,6 +83,11 @@ class GEODataset(torch.utils.data.Dataset):
         else:
             with open(MAIN_PATH / ann_file, 'rb') as file:
                 self.contents = json.load(file)
+            if self.cfg.diagram_annotation_path:
+                with open(MAIN_PATH / self.cfg.diagram_annotation_path, "rb") as file:
+                    self.pgps9k_annot = json.load(file)
+            else:
+                self.pgps9k_annot = None
         for key in self.contents.keys():
             self.ids.append(key)
           
@@ -168,7 +174,14 @@ class GEODataset(torch.utils.data.Dataset):
             # # only apply Resize, RandomHorizontalFlip, so that keep [W, H] format, suitable for OCR
             # images_not_tensor = self.transforms.trans_image_no_tensor(img_org)
 
-        return img, images_not_tensor, target_det, target_seg, targets_geo, targets_sym, img_id, index
+        # this is for rel construction evaluation
+        if self.pgps9k_annot:
+            rel_gold_annot = self.pgps9k_annot[re.sub("\.png", "", annot_each["diagram"])]
+            golden_rel_for_eval = self.extract_golden_rel_from_pgps9k(rel_gold_annot)
+        else:
+            golden_rel_for_eval = None
+            
+        return img, images_not_tensor, target_det, target_seg, targets_geo, targets_sym, img_id, index, golden_rel_for_eval
 
     def __len__(self):
         return len(self.ids)
@@ -739,3 +752,84 @@ class GEODataset(torch.utils.data.Dataset):
                     raise ValueError
 
         return symbol_geo_rel
+    
+    @staticmethod
+    def extract_golden_rel_from_pgps9k(annot):
+        sym_to_cls = {sym["id"] : sym["sym_class"] for sym in annot["symbols"]}
+        sym_text_to_cls = {sym["id"] : sym["text_class"] for sym in annot["symbols"]}
+        relations = annot["relations"]
+        geo2geo = relations["geo2geo"]
+        sym2geo = relations["sym2geo"]
+        
+        # geo2geo
+        golden_geo2geo = {
+            "endpoint_num" : 0,
+            "online_num" : 0,
+            "center_num" : 0,
+            "oncircle_num" : 0,
+        }
+        for geo_rel in geo2geo:
+            if geo_rel[2] == "endpoint":
+                golden_geo2geo["endpoint_num"] +=1
+            elif geo_rel[2] == "online":
+                golden_geo2geo["online_num"] +=1
+            elif geo_rel[2] == "center":
+                golden_geo2geo["center_num"] +=1
+            elif geo_rel[2] == "oncircle":
+                golden_geo2geo["oncircle_num"] +=1
+            else:
+                raise ValueError(f"Unknown geo2geo rel: {geo_rel[2]}")
+        
+        # sym2geo
+        # text_symbol
+        golden_sym2geo = {
+            "text_symbol_num" : 0,
+            "angle_symbol_num" : 0,
+            "double_angle_symbol_num" : 0,
+            "triple_angle_symbol_num" : 0,
+            "quad_angle_symbol_num" : 0,
+            "penta_angle_symbol_num" : 0,
+            "bar_symbol_num" : 0,
+            "double_bar_symbol_num" : 0,
+            "triple_bar_symbol_num" : 0,
+            "quad_bar_symbol_num" : 0,
+            "parallel_symbol_num" : 0,
+            "double_parallel_symbol_num" : 0,
+            "triple_parallel_symbol_num" : 0,
+            "perpendicular_symbol_num" : 0,
+        }
+        for sym_rel in sym2geo:
+            if sym_to_cls[sym_rel[0]] == "text":
+                if sym_text_to_cls[sym_rel[0]] in ["degree", "len"]:
+                    golden_sym2geo["text_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "angle":
+                golden_sym2geo["angle_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "double angle":
+                golden_sym2geo["double_angle_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "triple angle":
+                golden_sym2geo["triple_angle_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "quad angle":
+                golden_sym2geo["quad_angle_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "penta angle":
+                golden_sym2geo["penta_angle_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "bar":
+                golden_sym2geo["bar_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "double bar":
+                golden_sym2geo["double_bar_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "triple bar":
+                golden_sym2geo["triple_bar_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "quad bar":
+                golden_sym2geo["quad_bar_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "parallel":
+                golden_sym2geo["parallel_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "double parallel":
+                golden_sym2geo["double_parallel_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "triple parallel":
+                golden_sym2geo["triple_parallel_symbol_num"] +=1
+            elif sym_to_cls[sym_rel[0]] == "perpendicular":
+                golden_sym2geo["perpendicular_symbol_num"] +=1
+
+        return {
+            "golden_geo2geo": golden_geo2geo,
+            "golden_sym2geo": golden_sym2geo,
+        }

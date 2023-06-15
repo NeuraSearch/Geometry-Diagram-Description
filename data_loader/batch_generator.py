@@ -256,6 +256,7 @@ def geo_data_collate_fn(datas_list):
     targets_geo = list(batch[4])
     targets_sym = list(batch[5])
     images_id = list(batch[6])
+    golden_rel_for_eval = list(batch[8])
         
     return {
         "images": images,
@@ -265,6 +266,7 @@ def geo_data_collate_fn(datas_list):
         "targets_geo": targets_geo,
         "targets_sym":targets_sym,
         "images_id": images_id,
+        "golden_rel_for_eval": golden_rel_for_eval,
     }
     
 def unigeo_data_collate_fn(data_list, tokenizer):
