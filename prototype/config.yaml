@@ -106,7 +106,7 @@ solution_generation_data_args:
   t5_test_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_test_pgps9k.json"
   problem_form: "pgps9k" # calculation, proving, pgps9k, geometry3k
   use_golden_diagram: True
-  golden_diagram_path: "data/PGPS9K_all/golden_diagram_annotation.json"
+  golden_diagram_path: "data/PGPS9K_all/golden_diagram_annotation_logic_form.json"
 solution_generation_model_args:
   gp_resume: null
   model_type: "t5-base"
