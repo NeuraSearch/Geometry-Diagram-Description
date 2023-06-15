@@ -1,9 +1,9 @@
 main_args:
-  is_train: False
+  is_train: True
   use_all_data: False
   all_img_path: "data/PGPS9K_all/Diagram"
   dataset_name: "pgps9k"  # PGDP5K, UniGeo, pgps9k, geometry3k
-  project_name: "v3.0_train_rel"
+  project_name: "v3.1_Gold"
   item_name: "UniGeo_PRV_1e-4"
   backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
   resume: "best_rel/best.pth"
@@ -25,8 +25,8 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  wandb_key: null
+  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  # wandb_key: null
   epochs: 100
   warmpup: False
   toy_data: False
@@ -98,13 +98,15 @@ solution_generation_data_args:
   t5_train_img_path: "data/PGPS9K_all/PGPS9K/images_unigeo_cal"
   t5_eval_img_path: "data/PGPS9K_all/PGPS9K/images_unigeo_cal"
   t5_test_img_path: "data/PGPS9K_all/PGPS9K/images_unigeo_cal"
-  t5_train_annot_path: "data/UniGeo/UniGeo/UniGeo_PRV_train.json" 
-  t5_eval_annot_path: "data/UniGeo/UniGeo/UniGeo_PRV_test.json" 
-  t5_test_annot_path: "data/UniGeo/UniGeo/UniGeo_PRV_test.json"
-  t5_train_parse_path: "data/UniGeo/UniGeo/UniGeo_PRV_parse_train.json"
-  t5_eval_parse_path: "data/UniGeo/UniGeo/UniGeo_PRV_parse_test.json"
-  t5_test_parse_path: "data/UniGeo/UniGeo/UniGeo_PRV_parse_test.json"
-  problem_form: "proving" # calculation, proving, pgps9k, geometry3k
+  t5_train_annot_path: "data/PGPS9K_all/PGPS9K/train.json" 
+  t5_eval_annot_path: "data/PGPS9K_all/PGPS9K/test.json" 
+  t5_test_annot_path: "data/PGPS9K_all/PGPS9K/test.json"
+  t5_train_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_train_pgps9k.json"
+  t5_eval_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_test_pgps9k.json"
+  t5_test_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_test_pgps9k.json"
+  problem_form: "pgps9k" # calculation, proving, pgps9k, geometry3k
+  use_golden_diagram: True
+  golden_diagram_path: "data/PGPS9K_all/golden_diagram_annotation.json"
 solution_generation_model_args:
   gp_resume: null
   model_type: "t5-base"

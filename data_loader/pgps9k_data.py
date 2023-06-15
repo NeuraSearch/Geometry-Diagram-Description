@@ -25,6 +25,13 @@ class PGPS9KDataset(torch.utils.data.Dataset):
             self.parse_contents = json.load(file)
         for key in self.contents.keys():
             self.ids.append(key)
+        
+        if cfg.use_golden_diagram:
+            self.true_img_ids = []
+            for value in self.contents.values():
+                self.true_img_ids.append(value["diagram"].replace(".png", "")) 
+            with codecs.open(MAIN_PATH / cfg.golden_diagram_path, "r") as file:
+                self.golden_diagram_contents = json.load(file)
             
         if cfg.toy_data:
             self.ids = self.ids[:50]
@@ -37,18 +44,25 @@ class PGPS9KDataset(torch.utils.data.Dataset):
         img_id = self.ids[index]    # here is not "xxx.png", it's "prob_xx"
         annot_each = self.contents[img_id]
         parse_each = self.parse_contents[img_id]
+        if self.cfg.use_golden_diagram:
+            true_img_id = self.true_img_ids[index]
+            golden_contents = self.golden_diagram_contents[true_img_id]
         
         diagram_description = ""
         if self.cfg.enable_diagram_descirption:
-            for rel_name, des in parse_each.items():
-                if not self.enable_geo_rel:
-                    if rel_name in ["points", "lines", "angle"]:
-                        continue
-                if type(des) == str:
-                    diagram_description = diagram_description + des + " "
-                elif (type(des) == list) and (len(des) != 0):
-                    diagram_description = diagram_description + " ".join(des) + " "
-                
+            if not self.cfg.use_golden_diagram:
+                for rel_name, des in parse_each.items():
+                    if not self.enable_geo_rel:
+                        if rel_name in ["points", "lines", "angle"]:
+                            continue
+                    if type(des) == str:
+                        diagram_description = diagram_description + des + " "
+                    elif (type(des) == list) and (len(des) != 0):
+                        diagram_description = diagram_description + " ".join(des) + " "
+            else:
+                for rel_name, des in golden_contents.items():
+                    diagram_description = diagram_description + " ".join(des) + " , "
+        
         problem_type = annot_each["type"]
         problem = diagram_description + annot_each["text"]
         program = annot_each["expression"]

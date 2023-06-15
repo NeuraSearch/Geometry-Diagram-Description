@@ -615,7 +615,7 @@ def get_logic_form(relation_each, elem_dict, image_id):
 
 if __name__ == '__main__':
 
-    path_input = r"./diagram_annotation.json"
+    path_input = r"../data/PGPS9K_all/diagram_annotation_old.json"
     anno_all = get_annotation_json(path_input)
     logic_json = dict()
 
