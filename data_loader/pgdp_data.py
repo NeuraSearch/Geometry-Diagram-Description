@@ -177,7 +177,12 @@ class GEODataset(torch.utils.data.Dataset):
         # this is for rel construction evaluation
         if self.pgps9k_annot:
             rel_gold_annot = self.pgps9k_annot[re.sub("\.png", "", annot_each["diagram"])]
-            golden_rel_for_eval = self.extract_golden_rel_from_pgps9k(rel_gold_annot)
+            golden_geo2geo, golden_sym2geo_text, golden_sym2geo = self.extract_golden_rel_from_pgps9k(rel_gold_annot)
+            golden_rel_for_eval = {
+                "golden_geo2geo": golden_geo2geo,
+                "golden_sym2geo_text": golden_sym2geo_text,
+                "golden_sym2geo": golden_sym2geo,
+            }
         else:
             golden_rel_for_eval = None
             
@@ -755,81 +760,47 @@ class GEODataset(torch.utils.data.Dataset):
     
     @staticmethod
     def extract_golden_rel_from_pgps9k(annot):
-        sym_to_cls = {sym["id"] : sym["sym_class"] for sym in annot["symbols"]}
-        sym_text_to_cls = {sym["id"] : sym["text_class"] for sym in annot["symbols"]}
-        relations = annot["relations"]
-        geo2geo = relations["geo2geo"]
-        sym2geo = relations["sym2geo"]
-        
-        # geo2geo
+        # 1. extract golden geo2geo rel
+        geo2geo = annot["relations"]["geo2geo"]
+        # # NOTE: Due to OCR and the order of reference,
+        # # it's impossible to make match the entities of these relations exactly,
+        # # so we count the number.
         golden_geo2geo = {
-            "endpoint_num" : 0,
-            "online_num" : 0,
-            "center_num" : 0,
-            "oncircle_num" : 0,
+            "endpoint": 0,
+            "online": 0,
+            "oncircle": 0,
+            "center": 0,
         }
-        for geo_rel in geo2geo:
-            if geo_rel[2] == "endpoint":
-                golden_geo2geo["endpoint_num"] +=1
-            elif geo_rel[2] == "online":
-                golden_geo2geo["online_num"] +=1
-            elif geo_rel[2] == "center":
-                golden_geo2geo["center_num"] +=1
-            elif geo_rel[2] == "oncircle":
-                golden_geo2geo["oncircle_num"] +=1
+        for rel_metadata in geo2geo:
+            rel = rel_metadata[2]
+            if rel in golden_geo2geo:
+                golden_geo2geo[rel] += 1
             else:
-                raise ValueError(f"Unknown geo2geo rel: {geo_rel[2]}")
-        
-        # sym2geo
-        # text_symbol
-        golden_sym2geo = {
-            "text_symbol_num" : 0,
-            "angle_symbol_num" : 0,
-            "double_angle_symbol_num" : 0,
-            "triple_angle_symbol_num" : 0,
-            "quad_angle_symbol_num" : 0,
-            "penta_angle_symbol_num" : 0,
-            "bar_symbol_num" : 0,
-            "double_bar_symbol_num" : 0,
-            "triple_bar_symbol_num" : 0,
-            "quad_bar_symbol_num" : 0,
-            "parallel_symbol_num" : 0,
-            "double_parallel_symbol_num" : 0,
-            "triple_parallel_symbol_num" : 0,
-            "perpendicular_symbol_num" : 0,
-        }
-        for sym_rel in sym2geo:
-            if sym_to_cls[sym_rel[0]] == "text":
-                if sym_text_to_cls[sym_rel[0]] in ["degree", "len"]:
-                    golden_sym2geo["text_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "angle":
-                golden_sym2geo["angle_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "double angle":
-                golden_sym2geo["double_angle_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "triple angle":
-                golden_sym2geo["triple_angle_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "quad angle":
-                golden_sym2geo["quad_angle_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "penta angle":
-                golden_sym2geo["penta_angle_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "bar":
-                golden_sym2geo["bar_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "double bar":
-                golden_sym2geo["double_bar_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "triple bar":
-                golden_sym2geo["triple_bar_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "quad bar":
-                golden_sym2geo["quad_bar_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "parallel":
-                golden_sym2geo["parallel_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "double parallel":
-                golden_sym2geo["double_parallel_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "triple parallel":
-                golden_sym2geo["triple_parallel_symbol_num"] +=1
-            elif sym_to_cls[sym_rel[0]] == "perpendicular":
-                golden_sym2geo["perpendicular_symbol_num"] +=1
+                raise ValueError(f"Unknown geo2geo relation: '{rel}'.")
 
-        return {
-            "golden_geo2geo": golden_geo2geo,
-            "golden_sym2geo": golden_sym2geo,
+        # 2. extract golden sym2geo rel -> text symbols
+        symbols = annot["symbols"]
+        golden_sym2geo_text = {
+            "point": 0,
+            "angle": 0,
+            "len": 0,
+            "degree": 0,
         }
+        for sym_metadata in symbols:
+            if sym_metadata["sym_class"] == "text":
+                text_cls = sym_metadata["text_class"]
+                if text_cls in golden_sym2geo_text:
+                    golden_sym2geo_text[text_cls] += 1
+
+        # 3. extract golden sym2geo rel
+        golden_sym2geo = {}
+        for sym_metadata in symbols:
+            if sym_metadata["text_class"] == "others":
+                sym_cls = sym_metadata["sym_class"]
+                if sym_cls not in ["head", "head_len"]:
+                    if sym_cls not in golden_sym2geo:
+                        golden_sym2geo[sym_cls] = 1
+                    else:
+                        golden_sym2geo[sym_cls] += 1
+        
+        return golden_geo2geo, golden_sym2geo_text, golden_sym2geo

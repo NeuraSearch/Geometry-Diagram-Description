@@ -39,12 +39,17 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
     all_points = []
     all_lines = []
     all_circles = []
+    
+    pred_geo2geo_all = []
+    pred_sym2geo_text_all = []
+    pred_sym2geo_all = []
     # parse each data
     for per_geo_info, per_geo_rel, per_sym_geo_rel, per_ocr_res in zip(all_geo_info, geo_rels, sym_geo_rels, ocr_results):
         
+        pred_geo2geo = None
         """ 1. parse points, lines, circles objects, and geo relations. """
         if per_geo_rel != None:
-            points, lines, circles = parse_geo_rel_per_data(per_geo_rel)
+            points, lines, circles, pred_geo2geo = parse_geo_rel_per_data(per_geo_rel)
         else:
             points_num = per_geo_info["points"].size(0) if len(per_geo_info["points"]) != 0 else 0
             lines_num = per_geo_info["lines"].size(0) if len(per_geo_info["lines"]) != 0 else 0
@@ -53,11 +58,16 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
             points = [Point(ids=i, ref_fake_name=f"P{i}") for i in range(points_num)]
             lines = [Line(ids=i, ref_fake_name=f"L{i}") for i in range(lines_num)]
             circles = [Circle(ids=i, ref_fake_name=f"C{i}") for i in range(circles_num)]
-
+        
         if len(points) == 0:
             text_symbols_parse_results.append(None)
             other_symbols_parse_results.append(None)
+            pred_geo2geo_all.append(None)
+            pred_sym2geo_text_all.append(None)
+            pred_sym2geo_all.append(None)
             continue
+            
+        pred_geo2geo_all.append(pred_geo2geo)
         
         """ 2. parse text_symbols and geos. """
         # {"angle": [point] or [] , "length": [line] or []}
@@ -72,7 +82,7 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
         # print()
         # print()
         
-        text_symbols_geos_rel, points, lines, circles = parse_text_symbol_rel_per_data(
+        text_symbols_geos_rel, points, lines, circles, pred_sym2geo_text = parse_text_symbol_rel_per_data(
             per_sym_geo_rel["text_symbol_geo_rel"], 
             per_ocr_res, 
             points, lines, circles, 
@@ -81,6 +91,7 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
             per_sym_geo_rel["head_symbols"],
         )
         text_symbols_parse_results.append(text_symbols_geos_rel)
+        pred_sym2geo_text_all.append(pred_sym2geo_text)
         # print("text_symbols_geos_rel: ", text_symbols_geos_rel)
         # print()
         # print("*"*100)
@@ -88,6 +99,7 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
         """ 3. parse congruent. """
         # {"[]angle_symbols", "bar_symbols", "parallel_symbols", "perpendicular"}
         other_symbols_geos_rel = {}
+        pred_sym2geo = {}
         for sym, sym_rel in per_sym_geo_rel.items():
             if sym_rel != None:
                 # print("sym: ", sym)
@@ -96,30 +108,68 @@ def parse_rel(all_geo_info, geo_rels, sym_geo_rels, ocr_results, threshold=0.5):
                     res = extract_congruent_angle_geo(sym_rel, points, lines)
                     if res != None:
                         other_symbols_geos_rel[sym] = res
+                        
+                        sym_name_split = sym.split("_")
+                        if len(sym_name_split) == 4:
+                            name = sym_name_split[0]
+                        elif len(sym_name_split) == 5:
+                            name = " ".join(sym_name_split[:2])
+                        else:
+                            raise ValueError(f"{sym}")
+                        pred_sym2geo[name] = len(res)
+                        
                 elif "bar" in sym:
                     assert sym not in other_symbols_geos_rel
                     res = extract_congruent_bar_geo(sym_rel, lines, points)
                     if res != None:
                         other_symbols_geos_rel[sym] = res
+
+                        sym_name_split = sym.split("_")
+                        if len(sym_name_split) == 4:
+                            name = sym_name_split[0]
+                        elif len(sym_name_split) == 5:
+                            name = " ".join(sym_name_split[:2])
+                        else:
+                            raise ValueError(f"{sym}")
+                        pred_sym2geo[name] = len(res)                        
+
                 elif "parallel" in sym:
                     assert sym not in other_symbols_geos_rel
                     res = extract_parallel_geo(sym_rel, lines)
                     if res != None:
                         other_symbols_geos_rel[sym] = res
+
+                        sym_name_split = sym.split("_")
+                        if len(sym_name_split) == 4:
+                            name = sym_name_split[0]
+                        elif len(sym_name_split) == 5:
+                            name = " ".join(sym_name_split[:2])
+                        else:
+                            raise ValueError(f"{sym}")
+                        pred_sym2geo[name] = len(res)    
+
                 elif "perpendicular" in sym:
                     res = extract_perperdicular_geo(sym_rel, points, lines)
                     if res != None:
                         other_symbols_geos_rel["perpendicular"] = res
                         
+                        if sym in pred_sym2geo:
+                            assert sym == "perpendicular"
+                            pred_sym2geo["perpendicular"] += 1
+                        else:
+                            pred_sym2geo["perpendicular"] = 1
+
         other_symbols_parse_results.append(other_symbols_geos_rel)
         all_points.append(points)
         all_lines.append(lines)
         all_circles.append(circles)
+        pred_sym2geo_all.append(pred_sym2geo)
     # print("other_symbols_parse_results: ", other_symbols_parse_results)
     # print()
     # print("-"*100)
     # print()
-    return text_symbols_parse_results, other_symbols_parse_results, all_points, all_lines, all_circles
+    return text_symbols_parse_results, other_symbols_parse_results, all_points, all_lines, all_circles, \
+        pred_geo2geo_all, pred_sym2geo_text_all, pred_sym2geo_all
       
 def parse_geo_rel_per_data(geo_rel):
     """
@@ -139,6 +189,12 @@ def parse_geo_rel_per_data(geo_rel):
     points = []
     lines = []
     circles = []
+    pred_geo2geo = {
+        "endpoint": 0,
+        "online": 0,
+        "oncircle": 0,
+        "center": 0,
+    }
     
     """ Extract Points and Lines """
     if pl_rels != None:
@@ -155,10 +211,12 @@ def parse_geo_rel_per_data(geo_rel):
                     # print("l1: ", l)
                     points[p].rel_endpoint_lines.append(lines[l])
                     lines[l].rel_endpoint_points.append(points[p])
+                    pred_geo2geo["endpoint"] += 1
                 elif pl_rels[p, l].item() == 2:
                     # print("l2: ", l)
                     points[p].rel_online_lines.append(lines[l])
                     lines[l].rel_online_points.append(points[p])
+                    pred_geo2geo["online"] += 1
     
     """ Extract Points and Circles """
     if pc_rels != None:
@@ -173,10 +231,12 @@ def parse_geo_rel_per_data(geo_rel):
             for c in range(num_circles):
                 if pc_rels[p, c].item() == 1:
                     circles[c].rel_on_circle_points.append(points[p])
+                    pred_geo2geo["oncircle"] += 1
                 elif pc_rels[p, c].item() == 2:
                     circles[c].rel_center_points.append(points[p])
+                    pred_geo2geo["center"] += 1
     
-    return points, lines, circles
+    return points, lines, circles, pred_geo2geo
 
 def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles, sym_head, text_symbols_class, head_symbols_class):
     """
@@ -191,6 +251,12 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
 
     # {"angle", "length"}
     parse_res = defaultdict(list)
+    pred_sym2geo_text = {
+        "point": 0,
+        "angle": 0,
+        "len": 0,
+        "degree": 0,
+    }
     
     if text_sym_geo_rel == None:
         return parse_res, points, lines, circles
@@ -215,6 +281,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                         which_point_ids = idx - geo_start_ids["points"]
                         if len(ocr[i]) > 0:
                             points[which_point_ids].ref_name = ocr[i]
+                            pred_sym2geo_text["point"] += 1
                             class_0_cache[idx] = None
                         break
                     # elif func["lines"](idx):
@@ -245,6 +312,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                     if (idx not in class_0_cache) and (val > 0.5):
                                         if len(ocr[i]) > 0:
                                             points[idx].ref_name = ocr[i]
+                                            pred_sym2geo_text["point"] += 1
                                             class_0_cache[idx] = None
                         elif this_head_class == 1:  # LPL
                             # print("4.2_LPL...")
@@ -269,9 +337,11 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                     # print("res: ", res)
                                     if res[1] == "name":
                                         points[selected_point[0]].angle_name = res[0]
+                                        pred_sym2geo_text["point"] += 1
                                         class_1_P_cache[selected_point[0]] = None
                                     elif res[1] == "degree":
                                         parse_res["angle"].append([lines[selected_lines[0]], points[selected_point[0]], lines[selected_lines[1]], res[0]])                                
+                                        pred_sym2geo_text["degree"] += 1
                                         class_1_P_cache[selected_point[0]] = None
                                   
                         elif this_head_class == 2: # PLP
@@ -297,6 +367,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                     res = resolve_PLP(ocr[i])
                                     if res != None:
                                         parse_res["length"].append([points[selected_points[0]], lines[selected_line[0]], points[selected_points[1]], res])
+                                        pred_sym2geo_text["len"] += 1
                                         class_2_L_cache[selected_line[0]] = None
 
                         elif this_head_class == 3:  # PCP
@@ -321,6 +392,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                                     res = resolve_PCP(ocr[i])
                                     # print("res: ", res)
                                     if res != None:
+                                        pred_sym2geo_text["degree"] += 1
                                         parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], points[selected_points[1]], res])
                         
                         else:
@@ -353,9 +425,11 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     # print("res: ", res)
                     if res[1] == "name":
                         points[selected_point[0]].angle_name = res[0]
+                        pred_sym2geo_text["angle"] += 1
                         class_1_P_cache[selected_point[0]] = None
                     elif res[1] == "degree":
                         parse_res["angle"].append([lines[selected_lines[0]], points[selected_point[0]], lines[selected_lines[1]], res[0]])
+                        pred_sym2geo_text["degree"] += 1
                         class_1_P_cache[selected_point[0]] = None
            
         elif text_sym_class == 2:   # PLP
@@ -383,6 +457,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     res = resolve_PLP(ocr[i])
                     # print("res: ", res)
                     if res != None:
+                        pred_sym2geo_text["len"] += 1
                         parse_res["length"].append([points[selected_points[0]], lines[selected_line[0]], points[selected_points[1]], res])
                         class_2_L_cache[selected_line[0]] = None
 
@@ -410,12 +485,13 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
                     res = resolve_PCP(ocr[i])
                     # print("res: ", res)
                     if res != None:
+                        pred_sym2geo_text["degree"] += 1
                         parse_res["angle"].append([points[selected_points[0]], circles[selected_circle[0]], selected_points[1], res])
                             
         else:
             raise ValueError(f"Unknown text_sym_class: {text_sym_class}")
             
-    return parse_res, points, lines, circles
+    return parse_res, points, lines, circles, pred_sym2geo_text
 
 def build_ids_assignment(points, lines, circles, sym_head):
 

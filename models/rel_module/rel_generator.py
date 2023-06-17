@@ -112,7 +112,7 @@ class RelGenerator(nn.Module):
             
             # text_symbols_parse_results: List[ Dict{} ], each Dict: {"angle": [point, point, ...] or [], "line": [line, line, ...] or []}
             # other_symbols_parse_results: List[ Dict{}], each Dict: {"parallel": [line, line, ...]}
-            text_symbols_parse_results, other_symbols_parse_results, points, lines, circles = parse_rel(
+            text_symbols_parse_results, other_symbols_parse_results, points, lines, circles, pred_geo2geo_all, pred_sym2geo_text_all, pred_sym2geo_all = parse_rel(
                 all_geo_info=all_geo_info,
                 geo_rels=geo_rels_predictions, 
                 sym_geo_rels=sym_geo_rels_predictions, 
@@ -123,6 +123,6 @@ class RelGenerator(nn.Module):
             # print()
             # print("convert_parse_to_natural_language...")
             # print()
-            natural_language_results, predict_rel  = convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_parse_results, points, lines, circles)
-
-            return natural_language_results, predict_rel
+            natural_language_results  = convert_parse_to_natural_language(text_symbols_parse_results, other_symbols_parse_results, points, lines, circles)
+            pred_rel = {"pred_geo2geo": pred_geo2geo_all, "pred_sym2geo_text": pred_sym2geo_text_all, "pred_sym2geo": pred_sym2geo_all}
+            return natural_language_results, pred_rel

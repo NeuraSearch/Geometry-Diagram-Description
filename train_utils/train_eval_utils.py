@@ -117,8 +117,12 @@ def evaluate(model, data_loader, device, logger=None):
     # TODO: define the metric here, e.g., accuracy
     
     predictions = {}
-    all_predict_rels = {}
-    all_golden_rels = {}
+    all_pred_geo2geo = {}
+    all_pred_sym2geo_text = {}
+    all_pred_sym2geo = {}
+    all_golden_geo2geo = {}
+    all_golden_sym2geo_text = {}
+    all_golden_sym2geo = {}
     for batch_data in metric_logger.log_every(data_loader, 10, header):
         # "images": images,
         # "images_not_tensors": images_not_tensors,
@@ -150,7 +154,9 @@ def evaluate(model, data_loader, device, logger=None):
         
         # for pgps9k rel evaluation
         golden_rel_for_eval = batch_data["golden_rel_for_eval"]
-        all_golden_rels.update({img_id: golden_rel_for_eval[idx] for idx, img_id in enumerate(batch_data["images_id"])})
+        all_golden_geo2geo.update({img_id: golden_rel_for_eval[idx]["golden_geo2geo"] for idx, img_id in enumerate(batch_data["images_id"])})
+        all_golden_sym2geo_text.update({img_id: golden_rel_for_eval[idx]["golden_sym2geo_text"] for idx, img_id in enumerate(batch_data["images_id"])})
+        all_golden_sym2geo.update({img_id: golden_rel_for_eval[idx]["golden_sym2geo"] for idx, img_id in enumerate(batch_data["images_id"])})
         
         # we have to wait until everything has been done,
         # then we start to count
@@ -163,9 +169,15 @@ def evaluate(model, data_loader, device, logger=None):
         """ *** Customized Part *** """
         natural_language_results, predict_rel = outputs
         natural_language_results_with_id = {img_id: natural_language_results[idx] for idx, img_id in enumerate(batch_data["images_id"])}
-        predict_rel_with_id = {img_id: predict_rel[idx] for idx, img_id in enumerate(batch_data["images_id"])}
+        
+        pred_geo2geo_with_id = {img_id: predict_rel["pred_geo2geo"][idx] for idx, img_id in enumerate(batch_data["images_id"])}
+        pred_sym2geo_text_with_id = {img_id: predict_rel["pred_sym2geo_text"][idx] for idx, img_id in enumerate(batch_data["images_id"])}
+        pred_sym2geo_with_id = {img_id: predict_rel["pred_sym2geo"][idx] for idx, img_id in enumerate(batch_data["images_id"])}
+
         gathered_natural_language_results = all_gather(natural_language_results_with_id)
-        gathered_predict_rel = all_gather(predict_rel_with_id)
+        gathered_pred_geo2geo = all_gather(pred_geo2geo_with_id)
+        gathered_pred_sym2geo_text = all_gather(pred_sym2geo_text_with_id)
+        gathered_pred_sym2geo = all_gather(pred_sym2geo_with_id)
         
         temp = {}
         for one_gpu_pred in gathered_natural_language_results:
@@ -174,11 +186,23 @@ def evaluate(model, data_loader, device, logger=None):
                 temp[key] = val
         predictions.update(temp)
         temp = {}
-        for one_gpu_pred in gathered_predict_rel:
+        for one_gpu_pred in gathered_pred_geo2geo:
             for key, val in one_gpu_pred.items():
                 assert key not in temp, f"duplicate key: ({key})"
                 temp[key] = val
-        all_predict_rels.update(temp)
+        all_pred_geo2geo.update(temp)
+        temp = {}
+        for one_gpu_pred in gathered_pred_sym2geo_text:
+            for key, val in one_gpu_pred.items():
+                assert key not in temp, f"duplicate key: ({key})"
+                temp[key] = val
+        all_pred_sym2geo_text.update(temp)
+        temp = {}
+        for one_gpu_pred in gathered_pred_sym2geo:
+            for key, val in one_gpu_pred.items():
+                assert key not in temp, f"duplicate key: ({key})"
+                temp[key] = val
+        all_pred_sym2geo.update(temp)
         """ *** *** *** *** *** *** """
         
         # !!!: we uncomment the below line, so better wait here.
@@ -197,7 +221,13 @@ def evaluate(model, data_loader, device, logger=None):
     metric_logger.synchronize_between_processes()
     print("Averaged stats: ", metric_logger)
     
-    evaluate_rel(all_golden_rel=all_golden_rels, all_predict_rel=all_predict_rels, metric_logger=metric_logger)
+    evaluate_rel(all_golden_geo2geo=all_golden_geo2geo,
+                 all_golden_sym2geo_text=all_golden_sym2geo_text,
+                 all_golden_sym2geo=all_golden_sym2geo,
+                 all_pred_geo2geo=all_pred_geo2geo, 
+                 all_pred_sym2geo_text=all_pred_sym2geo_text,
+                 all_pred_sym2geo=all_pred_sym2geo,
+                 metric_logger=metric_logger)
     if is_main_process():   # actually redudant check, self.logger wll not be created on non-main process
         logger.info(metric_logger)
     

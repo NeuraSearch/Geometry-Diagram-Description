@@ -1,5 +1,5 @@
 main_args:
-  is_train: True
+  is_train: False
   use_all_data: False
   all_img_path: "data/PGPS9K_all/Diagram"
   dataset_name: "pgps9k"  # PGDP5K, UniGeo, pgps9k, geometry3k
@@ -25,8 +25,8 @@ main_args:
   print_freq: 1
   seed: 42
   device: "cuda"
-  wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
-  # wandb_key: null
+  # wandb_key: "e4585419c5dac8004748c8f4ea34d6d4faeb64e2"
+  wandb_key: null
   epochs: 100
   warmpup: False
   toy_data: False
