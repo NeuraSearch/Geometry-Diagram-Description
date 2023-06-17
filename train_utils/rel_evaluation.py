@@ -76,9 +76,27 @@ def update_metric(gold, pred, name, metric_logger, force_name=None):
     correct = min(gold[name], pred[name])
     incorrect = abs(gold[name] - pred[name])
     for _ in range(correct):
-        if force_name: name = force_name
-        metric_logger.update(name=1.0)
+        if force_name:
+            metric_logger.update(text_symbol=1.0)
+        else:
+            if name == "endpoint":
+                metric_logger.update(endpoint=1.0)
+            elif name == "online":
+                metric_logger.update(online=1.0)
+            elif name == "oncircle":
+                metric_logger.update(oncircle=1.0)
+            elif name == "center":
+                metric_logger.update(center=1.0)
     for _ in range(incorrect):
-        if force_name: name = force_name
-        metric_logger.update(name=0.0)
+        if force_name:
+            metric_logger.update(text_symbol=0.0)
+        else:
+            if name == "endpoint":
+                metric_logger.update(endpoint=0.0)
+            elif name == "online":
+                metric_logger.update(online=0.0)
+            elif name == "oncircle":
+                metric_logger.update(oncircle=0.0)
+            elif name == "center":
+                metric_logger.update(center=0.0)
     
