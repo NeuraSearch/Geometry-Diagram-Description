@@ -259,7 +259,7 @@ def parse_text_symbol_rel_per_data(text_sym_geo_rel, ocr, points, lines, circles
     }
     
     if text_sym_geo_rel == None:
-        return parse_res, points, lines, circles
+        return parse_res, points, lines, circles, pred_sym2geo_text
     
     """ construct function for determine ids to correct geo. """
     func, geo_start_ids = build_ids_assignment(points, lines, circles, sym_head)
