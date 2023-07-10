@@ -158,8 +158,8 @@ CUDA_VISIBLE_DEVICES=0 python main.py ${ARGS}
 
 ### Download the trained Image Parser Module and Relation Construction Module:  
 If you don't want to train modules from scratch, please download our public trained modules:  
-- [Image Parser Module](https://drive.google.com/file/d/1pvi3tN_IxEiPHWEtZcR4oyIJqsrTvYZf/view?usp=sharing).
-- [Relation Construction Module](https://drive.google.com/file/d/1_LCu1RwSD-rXKKcrXVTM_m5lExU6O1A6/view?usp=sharing).  
+- [Image Parser Module](https://drive.google.com/file/d/1BMv0-1c0YgPiib81-QEvC-Y5PyCnZC8W/view?usp=sharing).
+- [Relation Construction Module](https://drive.google.com/file/d/1EMnrv5obRZlW4vPLnL579syWvCB9iEf3/view?usp=sharing).  
 
 ## Problem Solving Module Training and Inference  
 
