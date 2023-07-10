@@ -15,7 +15,7 @@ pip install -r requirements.txt
 ```
 
 >  - Python version should be greater than or equal to 3.7.
->  - All the hyper-parameters and configuration settings on in the `./prototype/config.yaml`. However, please specify the values in the bash files unders `./bash_script` directors.
+>  - All the hyper-parameters and configuration settings on in the `./prototype/config.yaml`.
 
 ## Prepare Dataset
 Create `data` folder in the main directory, then please download datasets (PGDP5K, PGPS9K, UniGeo, Geometry3K) by yourself, and save them according to below instructions:
@@ -104,7 +104,6 @@ main_args:
 ```  
 > 2. Change the arguments to train the Relation Construction Module alone, or the Relation Construction Module with fine-tune the Image Parser Module. In our experimetn setup, we choose the latter to fine-tune the Image Parser Module while training the Relation Construction Module:  
 ```
-# 
 # only train Relation Construction Module
 main_args:
   only_train_rel: True
@@ -198,6 +197,14 @@ main_args:
 solution_generation_model_args:
   gp_resume: null
 ```  
+
+If you want to use ground-truth diagram annotations, please modify:  
+```
+solution_generation_data_args:
+  use_golden_diagram: True
+  golden_diagram_path: "data/PGPS9K_all/golden_diagram_annotation_logic_form.json"
+```
+*** You can use scripts in `./anno2clause/generate_logic_form.py` to convert the ground-truth clauses of PGPS9K dataset into natural language desriptions. The scripts is modified based on the tools provided by the author of PGPS9K. ***  
 
 ### Download the trained models:  
 If you don't want to train module from scratch, please download our public trained modules:  
