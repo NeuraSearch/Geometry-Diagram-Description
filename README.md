@@ -158,8 +158,8 @@ CUDA_VISIBLE_DEVICES=0 python main.py ${ARGS}
 
 ### Download the trained Image Parser Module and Relation Construction Module:  
 If you don't want to train modules from scratch, please download our public trained modules:  
-- [Image Parser Module](https://drive.google.com/file/d/1BMv0-1c0YgPiib81-QEvC-Y5PyCnZC8W/view?usp=sharing).
-- [Relation Construction Module](https://drive.google.com/file/d/1EMnrv5obRZlW4vPLnL579syWvCB9iEf3/view?usp=sharing).  
+- [Image Parser Module](https://drive.google.com/file/d/11WP8CN6z_ihziUkc4kCl0VDlgCvfVUEJ/view?usp=sharing).
+- [Relation Construction Module](https://drive.google.com/file/d/1519vBOoLyYWk9xTxvreYXzjw3AvtFdpP/view?usp=sharing).  
 
 ## Problem Solving Module Training and Inference  
 
@@ -208,9 +208,10 @@ solution_generation_data_args:
 
 ### Download the trained models:  
 If you don't want to train module from scratch, please download our public trained modules:  
-- [Problem Solving Module UniGeo]().
-- [Problem Solving Module PGPS9K]().  
-- [Problem Solving Module Geometry3K]().  
+- [Best Problem Solving Module for UniGeo CAL](https://drive.google.com/file/d/1CLA9No0S4iG0IP64SPRra42NvT0Sa4tO/view?usp=sharing).
+- [Best Problem Solving Module for UniGeo PRV](https://drive.google.com/file/d/1GyS8ZTPCG507gQJOsco5ywo7TUhJ7MiA/view?usp=sharing).
+- [Best Problem Solving Module for PGPS9K](https://drive.google.com/file/d/1e-vryoKpJXpS29XGkRW7_OiywwvFGixl/view?usp=sharing).  
+- [Best Problem Solving Module for Geometry3K](https://drive.google.com/file/d/1J3VDmXBJPxO_CoWNgtcW5GtQs00V28vV/view?usp=sharing).  
 
 ## Results
 

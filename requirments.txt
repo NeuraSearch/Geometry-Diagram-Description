@@ -1,2 +1,5 @@
 easyocr
 scikit-learn
+pytorch
+transformers
+opencv-python
