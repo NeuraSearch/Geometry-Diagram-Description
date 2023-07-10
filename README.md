@@ -22,25 +22,23 @@ Please download datasets (PGDP5K, PGPS9K, UniGeo, Geometry3K) by yourself, and s
 > - For PGDP5K dataset, please refer to author's [homepage](http://www.nlpr.ia.ac.cn/databases/CASIA-PGDP5K/index.html) to get access to the dataset, the unzipped directory is the same as the directory tree below.
 > - For PGPS9K dataset, please refer to author's [homepage](http://www.nlpr.ia.ac.cn/databases/CASIA-PGPS9K/index.html) to get access to the dataset, the unzipped directory is the same as the directory tree below.
 > - For UniGeo dataset, please download from the authors' [github](https://github.com/chen-judge/unigeo) directly. Notably, UniGeo dataset stores images and annotations into the binary files, please use our `./train_utils/convert_unigeo_to_desired_data.py` script to extract the images and annotations, which are better for intuitional understanding and compatible to our training process. The directory format should be consistent to the directory tree below.
-> - For the Geometry3K dataset, there is no need to download due to PGPS9K dataset contains the original Geometry3K dataset.
+> - For the Geometry3K dataset, there is no need to download due to PGPS9K dataset contains the original Geometry3K dataset.  
+
 The final directory tree for the `data` folder should be like:
 ```
 data
 ├─ PGDP5K
-│    ├─ .DS_Store
 │    ├─ annotations
 │    ├─ our_diagram_logic_forms_annot.json
 │    ├─ test
 │    ├─ train
 │    └─ val
 ├─ PGPS9K_all
-│    ├─ .DS_Store
 │    ├─ Diagram
 │    ├─ Geometry3K
 │    ├─ PGPS9K
 │    └─ diagram_annotation.json
 └─ UniGeo
-       ├─ .DS_Store
        ├─ UniGeo_CAL_test.json
        ├─ UniGeo_CAL_train.json
        ├─ UniGeo_CAL_val.json
