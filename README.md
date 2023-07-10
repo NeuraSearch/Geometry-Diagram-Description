@@ -204,7 +204,7 @@ solution_generation_data_args:
   use_golden_diagram: True
   golden_diagram_path: "data/PGPS9K_all/golden_diagram_annotation_logic_form.json"
 ```
-*** You can use scripts in `./anno2clause/generate_logic_form.py` to convert the ground-truth clauses of PGPS9K dataset into natural language desriptions. The scripts is modified based on the tools provided by the author of PGPS9K. ***  
+***You can use scripts in `./anno2clause/generate_logic_form.py` to convert the ground-truth clauses of PGPS9K dataset into natural language desriptions. The scripts is modified based on the tools provided by the author of PGPS9K.***  
 
 ### Download the trained models:  
 If you don't want to train module from scratch, please download our public trained modules:  
