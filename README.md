@@ -49,8 +49,8 @@ data
        ├─ images_unigeo_prv
        ├─ ori_data
        └─ unigeo_prv_images
-```
-
+```  
+You can also download the zipped data from [here](https://drive.google.com/file/d/1Vu8SM7YSH9KOpmoKY6zUH6nFTVp_WlSx/view?usp=sharing), which maintains the same directory tree formats as above. In addition, it contains the natural language diagram descriptions for each data (in "xxx_parst_xxx.json"). Remember change the directory name to `data`.  
 
 ## Image Parser Module Training and Inference (for relation construction)
 
