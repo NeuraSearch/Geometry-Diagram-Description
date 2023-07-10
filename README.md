@@ -52,123 +52,176 @@ data
 ```
 
 
-## Image Parser Module Training and Inference 
+## Image Parser Module Training and Inference (for relation construction)
+
+### Train Image Parser Module
+
+To train the Image Parser Module, you need to change the arguments in `prototype/config.yaml`. These arguments and their values should be:  
+```
+main_args:
+  is_train: True
+  all_img_path: "data/PGPS5K/train"
+  dataset_name: "PGDP5K"
+  project_name: ${name your own project name, for WandB use}
+  item_name: ${name your own item name, for WandB use}
+  backbone_weights: "https://cloudstor.aarnet.edu.au/plus/s/xtixKaxLWmbcyf7/download#mobilenet_v2-ecbe2b5.pth"
+  save_dir: "checkpoints"
+  train_annot_path: "data/PGPS5K/annotations/train.json"
+  eval_annot_path: "data/PGPS5K/annotations/val.json"
+  test_annot_path: "data/PGPS5K/annotations/test.json"
+  train_img_path: "data/PGPS5K/train"
+  eval_img_path: "data/PGPS5K/val"
+  test_img_path: "data/PGPS5K/test"
+  aspect_ratio_group_factor: 3
+  train_img_per_batch: 10
+  test_img_per_batch: 10
+  workers: 8
+  dist_url: "env://"
+  device: "cuda"
+  wandb_key: null   # put your "wandb key" if enable wandb, otherwise put "null"
+  epochs: 100
+  warmpup: False
+  only_train_rel: False
+  only_parse: True
+```  
+
+Next run `prototype/start.sh`:  
+```
+# single gpu (A100(40G))
+CUDA_VISIBLE_DEVICES=0 python main.py ${ARGS}
+
+# two gpus on one node (A100(40G) * 2)
+torchrun --nproc_per_node=2 main.py ${ARGS}
+```  
+
+### Inference and Relation Construction Module Training  
+After the image parser is trained, we start to train the Relation Construction Module, please modify the arguments in `prototype/config.yaml`:  
+
+> 1. Specify the load image parser weights in :  
+```
+main_args:
+  resume: ${save_dir}
+```  
+> 2. Change the arguments to train the Relation Construction Module alone, or the Relation Construction Module with fine-tune the Image Parser Module. In our experimetn setup, we choose the latter to fine-tune the Image Parser Module while training the Relation Construction Module:  
+```
+# 
+# only train Relation Construction Module
+main_args:
+  only_train_rel: True
+  only_parse: False
+
+# train Relation Construction Module and fine-tune Image Parser Module
+main_args:
+  only_train_rel: False
+  only_parse: False
+```  
+> 3. The Relation Construction Module is trained on PGPS9K dataset, so modify the data path:  
+```
+main_args:
+  dataset_name: "pgps9k"
+  train_annot_path: "data/PGPS9K_all/PGPS9K/train.json"
+  eval_annot_path: "data/PGPS9K_all/PGPS9K/test.json"
+  test_annot_path: "data/PGPS9K_all/PGPS9K/test.json"
+  train_img_path: "data/PGPS9K_all/Diagram"
+  eval_img_path: "data/PGPS9K_all/Diagram"
+  test_img_path: "data/PGPS9K_all/Diagram"
+```  
+> 4.  Next run `prototype/start.sh`, the Relation Construction Module can be trained on only one A100 GPU(40G): 
+```
+CUDA_VISIBLE_DEVICES=0 python main.py ${ARGS}
+```  
+
+### Relation Construction Module Inference  
+To provide natural language diagram descriptions data for training the Problem Solving Module, we need to use the trained Image Parser Module and Relation Construction Module to generate natural language diagram descriptions for the diagrams. Please follow the instructions below:  
+
+> 1. Change to test mode:  
+```
+main_args:
+  is_train: False
+```  
+> 2. Change the dataset name for the dataset you want to generate natural language diagram descriptions for:  
+```
+# example, choose "UniGeo" dataset.
+main_args:
+  dataset_name: "UniGeo"  # PGDP5K, UniGeo, pgps9k, geometry3k
+```  
+> 3. Change the path for the dataset:  
+```
+# Notably, we need to generate natural language diagram descriptions for train and test dataset for training Problem Solving Module.
+main_args:
+  test_annot_path: "data/UniGeo/UniGeo_CAL_train.json"
+  test_img_path: "data/UniGeo/images_unigeo_cal"
+```  
+> 4. Next run `prototype/start.sh`: 
+```
+CUDA_VISIBLE_DEVICES=0 python main.py ${ARGS}
+```  
+
+### Download the trained Image Parser Module and Relation Construction Module:  
+If you don't want to train modules from scratch, please download our public trained modules:  
+- [Image Parser Module]().
+- [Relation Construction Module]().  
+
+## Problem Solving Module Training and Inference  
 
 ### Train
-
-To train the Image Parser Module
-
-```train
-cd bash_script
-./start_train.sh
+To train the Problem Solving Module, please follow the instructions below:  
+> 1. Modify the path for dataset annotations and natural language diagram descriptions:  
 ```
-
-> - Data Path: This is similar to the pre-process step, just uncomment the path information of the data set you want (FinQA or MathQA).
->       - Sub **If you do not want to select best parameters during train process by evaluating on dev data, you can just pass the test data to `DEV_DATA`, which evaluate the model after each epoch on the test data.**
-> - Customized Hyper-Parameters:
->       - Sub  `MAX_OP_LEN` and `MAX_ARGU_LEN`: for FinQA: 7 and 2. for MathQA: 15 and 4.
->       - Sub   `MAX_EPOCH`: for FinQA: 50. for MathQA: 100.
-> **Please don't change other parameters, since no need to do this. Unless, you know exactly why you want to do this. For example, change the model saved directory.**
-> *The experiments are training on A100 GPU with 40GB memory. The train batch size is set to 10, and the tranining time for FinQA and MathQA could be: 10h and 48h, respectively.*
-
-## Evaluation
-
-To evaluate my model, run:
-
-```eval
-cd bash_script
-./start_test.sh
+# for PGPS9K datset
+main_args:
+    dataset_name: "pgps9k"  # PGDP5K, UniGeo, pgps9k, geometry3k
+solution_generation_data_args:
+  t5_train_annot_path: "data/PGPS9K_all/PGPS9K/train.json" 
+  t5_eval_annot_path: "data/PGPS9K_all/PGPS9K/test.json" 
+  t5_test_annot_path: "data/PGPS9K_all/PGPS9K/test.json"
+  t5_train_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_train_pgps9k.json"
+  t5_eval_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_test_pgps9k.json"
+  t5_test_parse_path: "data/PGPS9K_all/PGPS9K/PGPS9K_parse_test_pgps9k.json"
+  problem_form: "pgps9k" # calculation, proving, pgps9k, geometry3k
+```  
+> 2. Next run `prototype/start.sh`: 
 ```
-> - Data Path: This is similar to the train step, just uncomment the path information of the test data set you want (FinQA or MathQA).
->       - Sub **If you want use test data for evaluation during train, there is no need here to re-evaluate on the test data, just go to the `MODEL_SAVE_DIR` to use the best precition file for calculating the metrics.**
-> - Customized Hyper-Parameters:
->       - Sub  `MAX_OP_LEN` and `MAX_ARGU_LEN`: for FinQA: 7 and 2. for MathQA: 15 and 4.
-> - Reload Model Path:
->       - Sub: `RELOAD_MODEL_PATH`: please change this to the saved model, there is an example value following it in the bash file.
-> **Please don't change other parameters, since no need to do this. Unless, you know exactly why you want to do this. For example, change the model saved directory.**
+# train program generator
+# CUDA_VISIBLE_DEVICES=0 python main_gp.py ${ARGS}
+```  
 
-After obtaining the prediction results, you need to calculate the **Prog Acc** and **Exe Acc** for FinQA, run:
-```eval
-cd models
-python calculate_metrics_finqanet.py
+### Test  
+To test the GOLD performances, please follow the instructions below: 
+> 1. Change to test mode:  
 ```
-> - You have to specify the predcition and golden files paths:
->   - Sub `json_in`: prediction file path. `"../prediction_results/3_test_results_finqa_NrHd_RoBERTa-large.json"` is the prediction file provided by us, which is the prediction results of our model **NvRam (RoBERTa-large)** on **FinQA** test data. 
->   - Sub `json_ori`: original retrieved data.
->   - Sub `our_gold_json`: the processed test data on Pre-Process step.
-An example as below. **The metrics code for FinQA is different with code for MathQA, since `calculate_metrics_finqanet.py` is the same as the original code of FinQA paper. However, with slightly change, supporting ablation study, etc. No code relevant with metric algorithm is changed, so the result is fair when compared with baseline FinQANet.**
+main_args:
+  is_train: False
+```  
+> 2. Specify the `gp_resume`:  
 ```
-    evaluate_result(
-        json_in="../prediction_results/3_test_results_finqa_NrHd_RoBERTa-large.json",
-        json_ori="../datasets/raw_data/finqa/test_retrieve.json",
-        our_gold_json="../datasets/cached_data/finqa/cached_test_data.json"
-    ) 
-```
+solution_generation_model_args:
+  gp_resume: null
+```  
 
-for MathQA, run:
-```eval
-cd models
-python calculate_metrics.py
-```
-> - You have to specify the predcition and golden files paths:
->   - Sub `mathqa_prediction_file_path`: prediction file path. `"../prediction_results/4_finqanet_mathqa_roberta-large.json"` is the prediction file provided by us, which is the prediction results of our model **NvRam (RoBERTa-large)** on **MathQA** test data. 
->   - Sub `mathqa_gold_file_path`: the processed test data on Pre-Process step.
-
-Other provided prediction file under `./prediction_results` directory:
-> `1_test_results_mathqa_NrHd_RoBERTa-base.json`: **NvRam (RoBERTa-base)** on **MathQA** test prediction results.
-> `2_converted_finqa_FinQANet_RoBERTa-large_full_results.json`: **FinQANet (RoBERTa-base)** on **FinQA** test prediction results, whose FinQANet model is trained by ourself. The json data is converted from the `2_finqa_FinQANet_RoBERTa-large_full_results.json`, by function `convert_original_file_to_we_want()` of `calculate_metrics.py`.
-> `4_finqanet_mathqa_roberta-large.json`: **FinQANet (RoBERTa-base)** on **MathQA** test prediction results.
-
-## Pre-trained Models
-
-You can download pretrained models here:
-
-- [NvRam (RoBERTa-large) for FinQA](https://drive.google.com/file/d/1iK9GVhIOtb4y5lEtZJs9LaEs_7mGYUfP/view?usp=sharing).
-- [NvRam (RoBERTa-large) for MathQA](https://drive.google.com/file/d/1D9p_uVzvgsQ0NGsmGnhUEW5IbPHoy8hQ/view?usp=sharing).
-
-> - For evaluation use:
->   - Sub: the same as **Evaluation** step, chagne the `RELOAD_MODEL_PATH` to the name of download pre-trained file name.
-> - For re-train use:
->   - Sub: change the configurations paths for the following arguments (following values are examples):
-```
-# RELOAD_MODEL_PATH=${MODEL_SAVE_DIR}/checkpoint_best_0.68.pt
-# RELOAD_CONFIG_PATH=${MODEL_SAVE_DIR}/checkpoint_best_0.68.ct
-# RELOAD_OPTIMIZER_PATH=${MODEL_SAVE_DIR}/checkpoint_best_0.68.op
-# RELOAD_SCHEDULER_PATH=${MODEL_SAVE_DIR}/checkpoint_best_0.68.lr
-```
->   - Sub: then add the values to the `PATH_ARGS` like below (or just uncomment the corresponding code):
-```
-PATH_ARGS="--data_name ${DATA_NAME} \
-           --cached_train_data ${TRAIN_DATA} \
-           --cached_dev_data ${DEV_DATA} \
-           --model_save_dir ${MODEL_SAVE_DIR} \
-           --eval_results_dir ${EVAL_RESULTS_DIR}  \
-           --cached_test_data ${TEST_DATA} \
-           --reload_model_path ${RELOAD_MODEL_PATH} \
-           --reaload_config_path ${RELOAD_CONFIG_PATH} \
-           --reload_optimizer_path ${RELOAD_OPTIMIZER_PATH} \
-           --reload_scheduler_path ${RELOAD_SCHEDULER_PATH}"
-```
+### Download the trained models:  
+If you don't want to train module from scratch, please download our public trained modules:  
+- [Problem Solving Module UniGeo]().
+- [Problem Solving Module PGPS9K]().  
+- [Problem Solving Module Geometry3K]().  
 
 ## Results
 
 Our model achieves the following performance:
 
-| Model and Datasets      | FinQA (test)  |  FinQA (test)| MathQA (test) |
-| ----------------------- |----------|--------- | ------------- |
-|                         | Exe Acc | Prog Acc | Prog Acc      |
-| Graph2Tree              |  0.37   |   0.0    |   69.96       |
-| NumNet                  |  2.32   |   n/a    |   n/a         |
-| NumNet+                 |  10.29  |   n/a    |   n/a         |
-| NeRd                    |  52.48  |  49.90   |   79.7        |
-| FinQANet(RoBERTa-base)  | 60.10   |  58.38   |   74.12       |
-| FinQANet(RoBERTa-large) |  65.05  |  63.52   |   79.20       |
-| NvRam (RoBERTa-base)    |  62.66  |  59.28   |   82.27       |
-| NvRam (RoBERTa-large)   | **68.96** | **65.21** | **83.00**  |
-| Human Expert            |  91.16  |  87.49   |    n/a        |
-| NvRam (RoBERTa-large)   |  50.68  |  48.17   |    n/a        |
+| Model and Datasets      | UniGeo CAL |  UniGeo Prv | PGPS9K Test | Geometry3K Test |
+| ----------------------- |------------|------------| ------------|     ------------|
+| BERT2Prog               |  54.7   |  48.0   |   n/a       | n/a |
+| NGS                  |  56.9   |   53.2  |   34.1      | 35.3|
+| Geoformer                |  62.5  |  56.4    |   35.6 |  36.8      |
+| InterGPS                    |  56.8  |  47.2   |   38.3      | 44.6 |
+| InterGPS (GT)  | n/a |  n/a   |   59.8       |  64.2 |
+| PSPNET |  53.2  |  42.3   |   58.8      |  59.5 |
+| PGPSNet (GT)    |  n/a  |  n/a   |   62.7       | 65.0 |
+| GOLD   | **75.2** | **98.5** | **60.6**  | **62.7** |
+| GOLD (GT)           |  n/a  |  n/a   |    65.8     | 69.1 |
 
->📋  All results are from our experiments, FinQA paper, or origianl papers.
+>📋  All results are from our experiments, the work of Chen et al. and the work of Zhang, Yin, and Liu.
 
 
 ## Contributing
