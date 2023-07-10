@@ -18,7 +18,7 @@ pip install -r requirements.txt
 >  - All the hyper-parameters and configuration settings on in the `./prototype/config.yaml`. However, please specify the values in the bash files unders `./bash_script` directors.
 
 ## Prepare Dataset
-Please download datasets (PGDP5K, PGPS9K, UniGeo, Geometry3K) by yourself, and save them according to below instructions:
+Create `data` folder in the main directory, then please download datasets (PGDP5K, PGPS9K, UniGeo, Geometry3K) by yourself, and save them according to below instructions:
 > - For PGDP5K dataset, please refer to author's [homepage](http://www.nlpr.ia.ac.cn/databases/CASIA-PGDP5K/index.html) to get access to the dataset, the unzipped directory is the same as the directory tree below.
 > - For PGPS9K dataset, please refer to author's [homepage](http://www.nlpr.ia.ac.cn/databases/CASIA-PGPS9K/index.html) to get access to the dataset, the unzipped directory is the same as the directory tree below.
 > - For UniGeo dataset, please download from the authors' [github](https://github.com/chen-judge/unigeo) directly. Notably, UniGeo dataset stores images and annotations into the binary files, please use our `./train_utils/convert_unigeo_to_desired_data.py` script to extract the images and annotations, which are better for intuitional understanding and compatible to our training process. The directory format should be consistent to the directory tree below.
@@ -52,9 +52,11 @@ data
 ```
 
 
-## Training
+## Image Parser Module Training and Inference 
 
-To train the model(s) in the paper, run this command:
+### Train
+
+To train the Image Parser Module
 
 ```train
 cd bash_script
