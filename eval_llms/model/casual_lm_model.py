@@ -26,10 +26,10 @@ def create_model_tokenizer(args: ArgumentParser, from_local: bool=True) -> Tuple
         
     else:      
         model = AutoModelForCausalLM.from_pretrained(
-            args.model_name,  device_map="auto", token="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"
-        ).cuda()
+            args.model_name
+        )
         model.eval()
-        tokenizer = AutoTokenizer.from_pretrained(args.model_name, token="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")
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name)
         config = AutoConfig.from_pretrained(args.model_name)
         
     return model, tokenizer, config

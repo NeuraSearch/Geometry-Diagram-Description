@@ -2,6 +2,8 @@
 # Author: Jiaxin Zhang
 # Date: Dec-8-2023
 
+import re
+import math
 import torch
 from argparse import ArgumentParser
 from torch.utils.data import Dataset
@@ -49,16 +51,22 @@ class GeoEvalDataset(Dataset):
                 description += ", ".join(descr)
         return description
 
-    def _process_per_instance(self, instance: dict,parse_info: dict, merge_type: str, prompt_type: str, data_id: str, data_name: str) -> dict:
+    def replace_number(self, text: str, numbers: list, data_name: str) -> str:
+        assert data_name == "UniGeo"
+        for i, val in enumerate(numbers):
+            text = text.replace(f"N_{i}", str(val))
+        return text
+
+    def _process_per_instance(self, instance: dict, parse_info: dict, merge_type: str, prompt_type: str, data_id: str, data_name: str) -> dict:
         description = self.extract_description(parse_info)
         
         # combine description, text, choice together
         example = naive_merge(
             diagram_description=description,
-            text=instance["text"] if data_name != "UniGeo" else instance["problem"],
+            text=instance["text"] if data_name != "UniGeo" else self.replace_number(instance["problem"], instance["numbers"], data_name),
             choice_list=instance["choices"] if data_name != "UniGeo" else instance["choice_numbers"]
         )
-        
+ 
         # wrap example with instruction
         if prompt_type == "llama2":
             example = convert_to_llama2_input_format(example)
