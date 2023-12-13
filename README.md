@@ -206,6 +206,11 @@ solution_generation_data_args:
 ```
 ***You can use scripts in `./anno2clause/generate_logic_form.py` to convert the ground-truth clauses of PGPS9K dataset into natural language desriptions. The scripts is modified based on the tools provided by the author of PGPS9K.***  
 
+### Use Llama2, CodeLlama as Problem-solving Module  
+
+Please run script `eval_llms/sh_files/llama2_7b_jiaxin_sample_script/evaluate.sh`, you should modify `eval_config.yaml` in the same directory to specifiy the weights of the LLMs you save on the machine.
+
+
 ### Download the trained models:  
 If you don't want to train module from scratch, please download our public trained modules:  
 - [Best Problem Solving Module for UniGeo CAL](https://drive.google.com/file/d/1CLA9No0S4iG0IP64SPRra42NvT0Sa4tO/view?usp=sharing).
