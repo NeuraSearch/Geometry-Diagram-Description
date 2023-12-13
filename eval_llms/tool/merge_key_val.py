@@ -1,6 +1,4 @@
 # coding:utf-8
-# Author: Jiaxin
-# Date: Dec-8-2023
 
 """This file provides methods to combine the "diagram_description", "text", "choice_list", etc."""
 

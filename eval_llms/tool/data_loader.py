@@ -1,6 +1,4 @@
 # coding:utf-8
-# Author: Jiaxin Zhang
-# Date: Dec-8-2023
 
 import re
 import math

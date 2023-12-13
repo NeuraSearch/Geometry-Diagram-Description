@@ -1,6 +1,4 @@
 # coding:utf-8
-# Author: Jiaxin
-# Date: Dec-1-2023
 
 """This file tokenizes the data and prepares them as input for the model."""
 

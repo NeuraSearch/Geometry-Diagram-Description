@@ -1,6 +1,4 @@
 # coding:utf-8
-# Author: Jiaxin
-# Date: Dec-6-2023
 
 """This file converts the math problem to the target format accepted by the Llama-2-chat as described:
     https://github.com/facebookresearch/llama/issues/435 
