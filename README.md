@@ -1,7 +1,7 @@
 # Geometry-Diagram-Description (In Progress)
 
 <!-- This repository is the official implementation of [My Paper Title](https://arxiv.org/abs/2030.12345).  -->
-This repository is the official implementation of <<GOLD: Geometry Problem Solvers with Natural Language Description>>
+This repository is the official implementation of [GOLD: Geometry Problem Solvers with Natural Language Description](https://aclanthology.org/2024.findings-naacl.19/) accepted in NAACL 2024 findings.
 
 <!-- >📋  Optional: include a graphic explaining your approach/main result, bibtex entry, link to demos, blog posts and tutorials -->
 ![Model Architecture](./model.png)
